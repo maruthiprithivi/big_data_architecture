@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - ./data/clickhouse:/var/lib/clickhouse
+      - ./clickhouse-init:/docker-entrypoint-initdb.d
+    networks:
+      - blockchain-network
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  collector:
+    build:
+      context: ./collector
+      dockerfile: Dockerfile
+    container_name: blockchain-collector
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - blockchain-network
+    volumes:
+      - ./collector:/app
+      - collector-state:/app/state
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: blockchain-dashboard
+    env_file:
+      - .env
+    ports:
+      - "8501:8501"
+    depends_on:
+      - clickhouse
+      - collector
+    networks:
+      - blockchain-network
+    volumes:
+      - ./dashboard:/app
+
+networks:
+  blockchain-network:
+    driver: bridge
+
+volumes:
+  collector-state:
