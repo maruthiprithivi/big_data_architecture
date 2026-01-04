@@ -111,6 +111,15 @@ class BitcoinCollector:
                     async with session.get(f"{self.rpc_url}/block/{block_hash}") as resp:
                         block = await resp.json()
 
+                    # EDUCATIONAL NOTE - Fetching Transaction IDs:
+                    # The Blockstream API's /block/{hash} endpoint returns block metadata only.
+                    # To get transaction IDs, we need a separate API call to /block/{hash}/txids
+                    # This returns an array of transaction hashes (txids) that we can then query.
+                    async with session.get(f"{self.rpc_url}/block/{block_hash}/txids") as resp:
+                        all_tx_ids = await resp.json()
+                        # Limit to 25 transactions for educational purposes (explained below)
+                        tx_ids = all_tx_ids[:25]
+
                     # EDUCATIONAL NOTE - Bitcoin Block Structure:
                     #
                     # block_height: Number of blocks since genesis (block 0). Also called
@@ -168,7 +177,8 @@ class BitcoinCollector:
                     # - Use pagination to fetch all transactions
                     # - Implement exponential backoff for rate limit errors
                     # - Consider running your own Bitcoin node for unlimited access
-                    tx_ids = block['tx'][:25] if 'tx' in block else []
+
+                    # tx_ids already fetched above from /block/{hash}/txids endpoint
                     tx_data = []
 
                     for tx_id in tx_ids:

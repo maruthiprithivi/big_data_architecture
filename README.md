@@ -135,9 +135,35 @@ flowchart TB
 
 ### Prerequisites
 
-- Docker and Docker Compose installed on your system
-- At least 10GB of free disk space (for data collection)
-- Internet connection for accessing blockchain RPC endpoints
+Before starting, ensure you have:
+
+**Required:**
+- **Docker Desktop 20.10+** installed and running
+  - Verify: `docker --version` and `docker compose version`
+  - Download: https://www.docker.com/products/docker-desktop
+- **10GB free disk space** (for Docker images and blockchain data)
+  - Check: `df -h .` (Unix/macOS) or `dir` (Windows)
+- **Internet connection** (for blockchain RPC API access)
+- **Basic command line skills** (navigating directories, running commands, viewing logs)
+
+**Recommended:**
+- Basic SQL knowledge (SELECT, WHERE, GROUP BY, aggregations)
+  - New to SQL? See "SQL Basics for Blockchain Data" section below
+- Understanding of REST APIs and JSON data format
+- Familiarity with Docker concepts (containers, images, compose)
+
+**Time Expectations:**
+- **First-time setup**: 15-20 minutes (Docker image downloads)
+- **Subsequent starts**: 30-60 seconds
+- **Core exercises** (1-6): 1.5-2 hours
+- **Advanced exercises** (7-9): 1-1.5 hours
+- **Extension challenges**: 2-3 hours
+
+**System Requirements:**
+- **Operating System**: macOS, Windows 10/11 with WSL2, or Linux
+- **RAM**: 8GB minimum (16GB recommended for comfortable experience)
+- **CPU**: 2+ cores recommended
+- **Storage**: SSD preferred for ClickHouse performance
 
 ### Quick Start
 
@@ -148,12 +174,28 @@ git clone git@github.com:maruthiprithivi/big_data_architecture.git
 cd blockchain-ingestion
 ```
 
-**2. Configure environment variables**
+**2. Configure environment variables** (optional for first-time users)
 
 ```bash
 cp .env.example .env
-# Edit .env if you want to customize settings
 ```
+
+**First-time users**: The defaults in `.env.example` work perfectly - no editing needed!
+You can skip creating `.env` entirely and use `.env.example` as-is.
+
+**To customize** (optional):
+- `COLLECTION_INTERVAL_SECONDS=5`: How often to collect data (default: 5 seconds)
+  - Increase to 10-30 if experiencing API rate limits
+- `MAX_COLLECTION_TIME_MINUTES=10`: Auto-stop safety limit
+  - Prevents accidental long-running collections in teaching environment
+- `MAX_DATA_SIZE_GB=5`: Maximum data size before auto-stop
+  - 5GB is enough for millions of transactions with ClickHouse compression
+- `BITCOIN_ENABLED=true` / `SOLANA_ENABLED=true`: Enable/disable specific blockchains
+  - Set to `false` to focus on one chain at a time
+
+**Ethereum Note**: Disabled by default (requires free API key from Infura or Alchemy)
+
+See "Configuration Reference" section at the end for all available options.
 
 **3. Start the system**
 
@@ -166,6 +208,42 @@ Or manually with Docker Compose:
 ```bash
 docker compose up --build -d
 ```
+
+**First-time setup**: 5-10 minutes (downloading Docker images ~2GB)
+- You'll see: "Pulling clickhouse...", "Pulling collector...", "Pulling dashboard..."
+- This is normal! Docker is downloading blockchain database and Python runtime images
+- Progress bars will show download status
+
+**Subsequent starts**: 30-60 seconds
+
+**Success indicators:**
+1. All services show "running":
+   ```bash
+   docker compose ps
+   # STATUS column should show "Up" for all 3 services (clickhouse, collector, dashboard)
+   ```
+
+2. ClickHouse shows "healthy":
+   ```bash
+   docker compose ps clickhouse
+   # STATUS should include "(healthy)" after ~30 seconds
+   ```
+
+3. Dashboard loads at http://localhost:8501
+   - Should show "Collection Status" with "Stopped" indicator (this is correct!)
+
+4. No error messages in logs:
+   ```bash
+   docker compose logs --tail=50
+   # Look for INFO messages, not ERROR or CRITICAL
+   ```
+
+**If startup exceeds 15 minutes**, see Troubleshooting section below.
+
+**What's happening during startup:**
+- ClickHouse creates 8 database tables (bitcoin_blocks, solana_transactions, collection_metrics, etc.)
+- Collector connects to blockchain RPC endpoints (Blockstream for Bitcoin, Solana mainnet)
+- Dashboard starts Streamlit web interface on port 8501
 
 **4. Access the dashboard**
 

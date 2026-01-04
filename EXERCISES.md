@@ -167,14 +167,61 @@ Before starting these exercises, ensure you have:
 
 **Instructions:**
 
-1. Connect to ClickHouse:
+1. **Open a new terminal window** (keep dashboard open in browser)
+
+2. **Connect to ClickHouse interactive SQL client**:
    ```bash
    docker compose exec clickhouse clickhouse-client \
      --password clickhouse_password \
      --database blockchain_data
    ```
 
-2. Run the following queries from **SAMPLE_QUERIES.md**:
+   **What this command does:**
+   - `docker compose exec clickhouse`: Execute command inside the ClickHouse container
+   - `clickhouse-client`: Start interactive SQL client (similar to `psql` for PostgreSQL)
+   - `--password clickhouse_password`: Authenticate (password defined in .env file)
+   - `--database blockchain_data`: Connect to our blockchain database
+
+3. **You should see a prompt**:
+   ```
+   clickhouse :)
+   ```
+   This means you're connected! The smiley face is ClickHouse's CLI prompt.
+
+4. **Test the connection**:
+   ```sql
+   SHOW TABLES;
+   ```
+
+   **Expected output** (8 tables):
+   ```
+   bitcoin_blocks
+   bitcoin_transactions
+   collection_metrics
+   collection_state
+   ethereum_blocks
+   ethereum_transactions
+   solana_blocks
+   solana_transactions
+   ```
+
+   If you see 8 tables, you're ready to query!
+
+5. **Try your first query**:
+   ```sql
+   SELECT count() FROM solana_transactions;
+   ```
+
+   **Expected**: A number > 0 if you've run collection (e.g., 450).
+   If 0, start collection in the dashboard first (Exercise 2).
+
+6. **Exit when done**:
+   ```sql
+   EXIT;
+   ```
+   or press `Ctrl+D`
+
+7. Run the following queries from **SAMPLE_QUERIES.md**:
    - "View Recent Bitcoin Blocks" - Shows latest block data
    - "View Recent Solana Blocks" - Shows latest slot/block data
    - Compare block structures using cross-chain comparison queries
