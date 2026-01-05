@@ -50,6 +50,38 @@ st.set_page_config(
 )
 
 
+def calculate_time_remaining(started_at_str, max_minutes):
+    """
+    Calculate time remaining before collection safety limit is reached.
+
+    Args:
+        started_at_str: ISO format datetime string when collection started
+        max_minutes: Maximum collection time in minutes
+
+    Returns:
+        tuple: (remaining_seconds: int, percentage_used: float, color: str)
+    """
+    if not started_at_str:
+        return 0, 0, 'normal'
+
+    started_at = datetime.fromisoformat(started_at_str)
+    elapsed = datetime.now() - started_at
+    max_seconds = max_minutes * 60
+    elapsed_seconds = int(elapsed.total_seconds())
+    remaining_seconds = max(0, max_seconds - elapsed_seconds)
+    percentage_used = (elapsed_seconds / max_seconds * 100) if max_seconds > 0 else 0
+
+    # Color coding based on time remaining
+    if remaining_seconds > 300:  # > 5 minutes
+        color = 'normal'
+    elif remaining_seconds > 120:  # > 2 minutes
+        color = 'warning'
+    else:  # < 2 minutes or stopped
+        color = 'critical'
+
+    return remaining_seconds, percentage_used, color
+
+
 # EDUCATIONAL NOTE - Streamlit Caching:
 #
 # @st.cache_resource is for objects that should be shared across all users
@@ -144,7 +176,7 @@ def stop_collection():
 # - st.button(): Clickable buttons that trigger actions
 
 st.title("⛓️ Blockchain Data Ingestion Dashboard")
-st.markdown("Real-time monitoring of blockchain data collection from Ethereum, Bitcoin, and Solana")
+st.markdown("Real-time monitoring of blockchain data collection from Bitcoin and Solana")
 
 # Control buttons - arranged in columns for horizontal layout
 col1, col2, col3 = st.columns([1, 1, 4])
@@ -202,9 +234,29 @@ if status:
         st.metric("Data Size", size_display)
 
     with col4:
-        max_size_gb = float(os.getenv('MAX_DATA_SIZE_GB', 5))
         max_time_min = int(os.getenv('MAX_COLLECTION_TIME_MINUTES', 10))
-        st.metric("Safety Limits", f"{max_time_min}min / {max_size_gb}GB")
+
+        if is_running and status.get('started_at'):
+            # Calculate time remaining until collection auto-stops
+            remaining_seconds, percentage_used, color_code = calculate_time_remaining(
+                status.get('started_at'), max_time_min
+            )
+
+            minutes = remaining_seconds // 60
+            seconds = remaining_seconds % 60
+
+            # Display with color coding
+            if color_code == 'critical':
+                st.error(f"⏱️ {minutes}:{seconds:02d} remaining")
+            elif color_code == 'warning':
+                st.warning(f"⏱️ {minutes}:{seconds:02d} remaining")
+            else:
+                st.success(f"⏱️ {minutes}:{seconds:02d} remaining")
+
+            st.caption(f"{percentage_used:.1f}% of collection time used")
+            st.progress(min(percentage_used / 100, 1.0))
+        else:
+            st.metric("Max Collection Time", f"{max_time_min} min")
 
 st.divider()
 
@@ -221,11 +273,12 @@ try:
     # The result gives us a breakdown by data type (blocks vs transactions)
     # and blockchain source (Ethereum, Bitcoin, Solana).
     counts_query = """
-    SELECT
-        'Ethereum Blocks' as source, count() as count FROM ethereum_blocks
-    UNION ALL
-    SELECT 'Ethereum Transactions' as source, count() as count FROM ethereum_transactions
-    UNION ALL
+    -- ETHEREUM DISABLED - Uncomment when Ethereum collection is enabled
+    -- SELECT
+    --     'Ethereum Blocks' as source, count() as count FROM ethereum_blocks
+    -- UNION ALL
+    -- SELECT 'Ethereum Transactions' as source, count() as count FROM ethereum_transactions
+    -- UNION ALL
     SELECT 'Bitcoin Blocks' as source, count() as count FROM bitcoin_blocks
     UNION ALL
     SELECT 'Bitcoin Transactions' as source, count() as count FROM bitcoin_transactions
@@ -233,10 +286,26 @@ try:
     SELECT 'Solana Blocks' as source, count() as count FROM solana_blocks
     UNION ALL
     SELECT 'Solana Transactions' as source, count() as count FROM solana_transactions
+    ORDER BY
+        CASE source
+            WHEN 'Bitcoin Blocks' THEN 1
+            WHEN 'Bitcoin Transactions' THEN 2
+            WHEN 'Solana Blocks' THEN 3
+            WHEN 'Solana Transactions' THEN 4
+        END
     """
 
     counts_result = client.query(counts_query)
     counts_df = pd.DataFrame(counts_result.result_rows, columns=['Source', 'Count'])
+
+    # Convert Source to categorical type with explicit order for stability
+    # This ensures the DataFrame maintains the correct order and the table respects it
+    from pandas.api.types import CategoricalDtype
+
+    source_order = ['Bitcoin Blocks', 'Bitcoin Transactions', 'Solana Blocks', 'Solana Transactions']
+    cat_type = CategoricalDtype(categories=source_order, ordered=True)
+    counts_df['Source'] = counts_df['Source'].astype(cat_type)
+    counts_df = counts_df.sort_values('Source')  # Ensures DataFrame is sorted
 
     col1, col2 = st.columns([2, 1])
 
@@ -245,12 +314,24 @@ try:
         # px.bar() creates a bar chart with minimal code.
         # Plotly charts are interactive: hover for details, zoom, pan, export.
         # use_container_width=True makes the chart fill the available space.
+
+        # Define fixed colors for consistent visualization
+        # Using blockchain brand colors to prevent random color changes
+        color_map = {
+            'Bitcoin Blocks': '#F7931A',        # Bitcoin orange
+            'Bitcoin Transactions': '#FF6B35',   # Lighter orange
+            'Solana Blocks': '#14F195',         # Solana green
+            'Solana Transactions': '#9945FF'    # Solana purple
+        }
+
         fig = px.bar(
             counts_df,
             x='Source',
             y='Count',
             color='Source',
-            title='Record Count by Source'
+            color_discrete_map=color_map,  # Explicit color mapping for stability
+            title='Record Count by Source',
+            category_orders={'Source': ['Bitcoin Blocks', 'Bitcoin Transactions', 'Solana Blocks', 'Solana Transactions']}  # Override Plotly's alphabetical sorting
         )
         fig.update_layout(showlegend=False, height=400)
         st.plotly_chart(fig, use_container_width=True)
@@ -262,7 +343,8 @@ try:
         st.dataframe(
             counts_df.style.format({'Count': '{:,.0f}'}),
             use_container_width=True,
-            height=400
+            height=400,
+            hide_index=True
         )
 
 except Exception as e:
@@ -270,197 +352,199 @@ except Exception as e:
 
 st.divider()
 
-# =============================================================================
-# PERFORMANCE METRICS SECTION
-# =============================================================================
+# # =============================================================================
+# # PERFORMANCE METRICS SECTION - COMMENTED OUT
+# # =============================================================================
+#
+# st.subheader("⚡ Collection Performance")
+#
+# try:
+#     # EDUCATIONAL NOTE - Time-Series Data:
+#     # We aggregate metrics by minute using toStartOfMinute() for cleaner charts.
+#     # The WHERE clause filters to last 10 minutes to show recent performance.
+#     # GROUP BY creates one data point per minute per blockchain source.
+#     metrics_query = """
+#     SELECT
+#         source,
+#         toStartOfMinute(metric_time) as minute,
+#         sum(records_collected) as total_records,
+#         avg(collection_duration_ms) as avg_duration_ms,
+#         sum(error_count) as errors
+#     FROM collection_metrics
+#     WHERE metric_time >= now() - INTERVAL 10 MINUTE
+#     GROUP BY source, minute
+#     ORDER BY minute DESC, source
+#     """
+#
+#     metrics_result = client.query(metrics_query)
+#
+#     if metrics_result.result_rows:
+#         metrics_df = pd.DataFrame(
+#             metrics_result.result_rows,
+#             columns=['Source', 'Minute', 'Records', 'Avg Duration (ms)', 'Errors']
+#         )
+#
+#         col1, col2 = st.columns(2)
+#
+#         with col1:
+#             # Line chart showing records over time
+#             fig = px.line(
+#                 metrics_df,
+#                 x='Minute',
+#                 y='Records',
+#                 color='Source',
+#                 title='Records Collected Over Time (Last 10 Minutes)'
+#             )
+#             fig.update_layout(height=350)
+#             st.plotly_chart(fig, use_container_width=True)
+#
+#         with col2:
+#             # Bar chart showing average collection duration
+#             fig = px.bar(
+#                 metrics_df.groupby('Source', sort=False)['Avg Duration (ms)'].mean().reset_index(),
+#                 x='Source',
+#                 y='Avg Duration (ms)',
+#                 color='Source',
+#                 title='Average Collection Duration by Source',
+#                 category_orders={'Source': ['ethereum', 'bitcoin', 'solana']}  # Maintain stable order
+#             )
+#             fig.update_layout(showlegend=False, height=350)
+#             st.plotly_chart(fig, use_container_width=True)
+#
+#         # Calculate and display events per second for each blockchain
+#         col1, col2, col3 = st.columns(3)
+#
+#         interval = int(os.getenv('COLLECTION_INTERVAL_SECONDS', 5))
+#
+#         for idx, source in enumerate(['ethereum', 'bitcoin', 'solana']):
+#             source_df = metrics_df[metrics_df['Source'] == source]
+#             if not source_df.empty:
+#                 # Sum records from last 5 collection cycles
+#                 recent_records = source_df.head(5)['Records'].sum()
+#                 # Calculate events per second (records / total seconds)
+#                 events_per_sec = recent_records / (interval * 5) if interval > 0 else 0
+#
+#                 with [col1, col2, col3][idx]:
+#                     st.metric(
+#                         f"{source.capitalize()} Events/sec",
+#                         f"{events_per_sec:.2f}"
+#                     )
+#     else:
+#         st.info("No collection metrics available yet. Start collection to see performance data.")
+#
+# except Exception as e:
+#     st.error(f"Error fetching metrics: {e}")
+#
+# st.divider()
 
-st.subheader("⚡ Collection Performance")
-
-try:
-    # EDUCATIONAL NOTE - Time-Series Data:
-    # We aggregate metrics by minute using toStartOfMinute() for cleaner charts.
-    # The WHERE clause filters to last 10 minutes to show recent performance.
-    # GROUP BY creates one data point per minute per blockchain source.
-    metrics_query = """
-    SELECT
-        source,
-        toStartOfMinute(metric_time) as minute,
-        sum(records_collected) as total_records,
-        avg(collection_duration_ms) as avg_duration_ms,
-        sum(error_count) as errors
-    FROM collection_metrics
-    WHERE metric_time >= now() - INTERVAL 10 MINUTE
-    GROUP BY source, minute
-    ORDER BY minute DESC, source
-    """
-
-    metrics_result = client.query(metrics_query)
-
-    if metrics_result.result_rows:
-        metrics_df = pd.DataFrame(
-            metrics_result.result_rows,
-            columns=['Source', 'Minute', 'Records', 'Avg Duration (ms)', 'Errors']
-        )
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            # Line chart showing records over time
-            fig = px.line(
-                metrics_df,
-                x='Minute',
-                y='Records',
-                color='Source',
-                title='Records Collected Over Time (Last 10 Minutes)'
-            )
-            fig.update_layout(height=350)
-            st.plotly_chart(fig, use_container_width=True)
-
-        with col2:
-            # Bar chart showing average collection duration
-            fig = px.bar(
-                metrics_df.groupby('Source')['Avg Duration (ms)'].mean().reset_index(),
-                x='Source',
-                y='Avg Duration (ms)',
-                color='Source',
-                title='Average Collection Duration by Source'
-            )
-            fig.update_layout(showlegend=False, height=350)
-            st.plotly_chart(fig, use_container_width=True)
-
-        # Calculate and display events per second for each blockchain
-        col1, col2, col3 = st.columns(3)
-
-        interval = int(os.getenv('COLLECTION_INTERVAL_SECONDS', 5))
-
-        for idx, source in enumerate(['ethereum', 'bitcoin', 'solana']):
-            source_df = metrics_df[metrics_df['Source'] == source]
-            if not source_df.empty:
-                # Sum records from last 5 collection cycles
-                recent_records = source_df.head(5)['Records'].sum()
-                # Calculate events per second (records / total seconds)
-                events_per_sec = recent_records / (interval * 5) if interval > 0 else 0
-
-                with [col1, col2, col3][idx]:
-                    st.metric(
-                        f"{source.capitalize()} Events/sec",
-                        f"{events_per_sec:.2f}"
-                    )
-    else:
-        st.info("No collection metrics available yet. Start collection to see performance data.")
-
-except Exception as e:
-    st.error(f"Error fetching metrics: {e}")
-
-st.divider()
-
-# =============================================================================
-# STORAGE DETAILS SECTION
-# =============================================================================
-
-st.subheader("💾 Storage Details")
-
-try:
-    # EDUCATIONAL NOTE - ClickHouse System Tables:
-    # system.parts contains metadata about data storage.
-    # Each "part" is a unit of data in ClickHouse's MergeTree engine.
-    #
-    # Key columns:
-    # - bytes: Uncompressed data size (what the data would be without compression)
-    # - bytes_on_disk: Actual disk usage (after compression)
-    # - rows: Number of rows in this part
-    # - active: Whether this part is current (vs. merged/deleted)
-    #
-    # formatReadableSize() converts bytes to human-readable format (KB, MB, GB).
-    storage_query = """
-    SELECT
-        table,
-        sum(rows) as total_rows,
-        formatReadableSize(sum(bytes)) as size,
-        formatReadableSize(sum(bytes_on_disk)) as compressed_size,
-        sum(bytes) as bytes_uncompressed,
-        sum(bytes_on_disk) as bytes_compressed
-    FROM system.parts
-    WHERE database = 'blockchain_data'
-    AND active = 1
-    GROUP BY table
-    ORDER BY sum(bytes) DESC
-    """
-
-    storage_result = client.query(storage_query)
-
-    if storage_result.result_rows:
-        storage_df = pd.DataFrame(
-            storage_result.result_rows,
-            columns=['Table', 'Rows', 'Uncompressed', 'Compressed', 'Bytes Uncompressed', 'Bytes Compressed']
-        )
-
-        col1, col2 = st.columns([3, 2])
-
-        with col1:
-            # Display table without raw bytes columns (keep human-readable only)
-            display_df = storage_df[['Table', 'Rows', 'Uncompressed', 'Compressed']].copy()
-            st.dataframe(
-                display_df.style.format({'Rows': '{:,.0f}'}),
-                use_container_width=True,
-                height=300
-            )
-
-        with col2:
-            # EDUCATIONAL NOTE - Understanding Compression in ClickHouse:
-            #
-            # Compression Ratio = (1 - compressed_size / uncompressed_size) * 100
-            #
-            # ClickHouse achieves high compression (often 80-95%) because:
-            # 1. Columnar storage: Similar values stored together compress well
-            #    (e.g., a column of timestamps has patterns; addresses share prefixes)
-            # 2. LZ4/ZSTD algorithms: Fast, efficient compression codecs
-            # 3. Sorted data: ORDER BY clause means adjacent rows have similar values
-            #
-            # Example: 1GB of blockchain data might compress to 100MB on disk.
-            # This matters for:
-            # - Storage costs (especially in cloud environments)
-            # - Query performance (less data to read from disk)
-            # - Network transfer (for distributed queries)
-            total_uncompressed = storage_df['Bytes Uncompressed'].sum()
-            total_compressed = storage_df['Bytes Compressed'].sum()
-
-            if total_uncompressed > 0:
-                compression_ratio = (1 - total_compressed / total_uncompressed) * 100
-
-                # EDUCATIONAL NOTE - Plotly Indicator:
-                # go.Indicator creates KPI-style visualizations with gauges, numbers, deltas.
-                # This gauge shows compression ratio with color-coded ranges.
-                fig = go.Figure(go.Indicator(
-                    mode="gauge+number+delta",
-                    value=compression_ratio,
-                    domain={'x': [0, 1], 'y': [0, 1]},
-                    title={'text': "Compression Ratio"},
-                    delta={'reference': 50},  # Show delta from 50%
-                    gauge={
-                        'axis': {'range': [None, 100]},
-                        'bar': {'color': "darkblue"},
-                        'steps': [
-                            {'range': [0, 30], 'color': "lightgray"},   # Low compression
-                            {'range': [30, 60], 'color': "gray"},       # Medium compression
-                            {'range': [60, 100], 'color': "lightgreen"} # High compression
-                        ],
-                        'threshold': {
-                            'line': {'color': "red", 'width': 4},
-                            'thickness': 0.75,
-                            'value': 90  # Target threshold
-                        }
-                    }
-                ))
-                fig.update_layout(height=300)
-                st.plotly_chart(fig, use_container_width=True)
-
-            # Summary metrics
-            st.metric("Total Uncompressed", storage_df['Uncompressed'].iloc[0] if len(storage_df) > 0 else "0 B")
-            st.metric("Total Compressed", storage_df['Compressed'].iloc[0] if len(storage_df) > 0 else "0 B")
-
-except Exception as e:
-    st.error(f"Error fetching storage details: {e}")
+# # =============================================================================
+# # STORAGE DETAILS SECTION - COMMENTED OUT
+# # =============================================================================
+#
+# st.subheader("💾 Storage Details")
+#
+# try:
+#     # EDUCATIONAL NOTE - ClickHouse System Tables:
+#     # system.parts contains metadata about data storage.
+#     # Each "part" is a unit of data in ClickHouse's MergeTree engine.
+#     #
+#     # Key columns:
+#     # - bytes: Uncompressed data size (what the data would be without compression)
+#     # - bytes_on_disk: Actual disk usage (after compression)
+#     # - rows: Number of rows in this part
+#     # - active: Whether this part is current (vs. merged/deleted)
+#     #
+#     # formatReadableSize() converts bytes to human-readable format (KB, MB, GB).
+#     storage_query = """
+#     SELECT
+#         table,
+#         sum(rows) as total_rows,
+#         formatReadableSize(sum(bytes)) as size,
+#         formatReadableSize(sum(bytes_on_disk)) as compressed_size,
+#         sum(bytes) as bytes_uncompressed,
+#         sum(bytes_on_disk) as bytes_compressed
+#     FROM system.parts
+#     WHERE database = 'blockchain_data'
+#     AND active = 1
+#     GROUP BY table
+#     ORDER BY sum(bytes) DESC
+#     """
+#
+#     storage_result = client.query(storage_query)
+#
+#     if storage_result.result_rows:
+#         storage_df = pd.DataFrame(
+#             storage_result.result_rows,
+#             columns=['Table', 'Rows', 'Uncompressed', 'Compressed', 'Bytes Uncompressed', 'Bytes Compressed']
+#         )
+#
+#         col1, col2 = st.columns([3, 2])
+#
+#         with col1:
+#             # Display table without raw bytes columns (keep human-readable only)
+#             display_df = storage_df[['Table', 'Rows', 'Uncompressed', 'Compressed']].copy()
+#             st.dataframe(
+#                 display_df.style.format({'Rows': '{:,.0f}'}),
+#                 use_container_width=True,
+#                 height=300,
+#                 hide_index=True
+#             )
+#
+#         with col2:
+#             # EDUCATIONAL NOTE - Understanding Compression in ClickHouse:
+#             #
+#             # Compression Ratio = (1 - compressed_size / uncompressed_size) * 100
+#             #
+#             # ClickHouse achieves high compression (often 80-95%) because:
+#             # 1. Columnar storage: Similar values stored together compress well
+#             #    (e.g., a column of timestamps has patterns; addresses share prefixes)
+#             # 2. LZ4/ZSTD algorithms: Fast, efficient compression codecs
+#             # 3. Sorted data: ORDER BY clause means adjacent rows have similar values
+#             #
+#             # Example: 1GB of blockchain data might compress to 100MB on disk.
+#             # This matters for:
+#             # - Storage costs (especially in cloud environments)
+#             # - Query performance (less data to read from disk)
+#             # - Network transfer (for distributed queries)
+#             total_uncompressed = storage_df['Bytes Uncompressed'].sum()
+#             total_compressed = storage_df['Bytes Compressed'].sum()
+#
+#             if total_uncompressed > 0:
+#                 compression_ratio = (1 - total_compressed / total_uncompressed) * 100
+#
+#                 # EDUCATIONAL NOTE - Plotly Indicator:
+#                 # go.Indicator creates KPI-style visualizations with gauges, numbers, deltas.
+#                 # This gauge shows compression ratio with color-coded ranges.
+#                 fig = go.Figure(go.Indicator(
+#                     mode="gauge+number+delta",
+#                     value=compression_ratio,
+#                     domain={'x': [0, 1], 'y': [0, 1]},
+#                     title={'text': "Compression Ratio"},
+#                     delta={'reference': 50},  # Show delta from 50%
+#                     gauge={
+#                         'axis': {'range': [None, 100]},
+#                         'bar': {'color': "darkblue"},
+#                         'steps': [
+#                             {'range': [0, 30], 'color': "lightgray"},   # Low compression
+#                             {'range': [30, 60], 'color': "gray"},       # Medium compression
+#                             {'range': [60, 100], 'color': "lightgreen"} # High compression
+#                         ],
+#                         'threshold': {
+#                             'line': {'color': "red", 'width': 4},
+#                             'thickness': 0.75,
+#                             'value': 90  # Target threshold
+#                         }
+#                     }
+#                 ))
+#                 fig.update_layout(height=300)
+#                 st.plotly_chart(fig, use_container_width=True)
+#
+#             # Summary metrics
+#             st.metric("Total Uncompressed", storage_df['Uncompressed'].iloc[0] if len(storage_df) > 0 else "0 B")
+#             st.metric("Total Compressed", storage_df['Compressed'].iloc[0] if len(storage_df) > 0 else "0 B")
+#
+# except Exception as e:
+#     st.error(f"Error fetching storage details: {e}")
 
 # =============================================================================
 # AUTO-REFRESH
@@ -468,18 +552,5 @@ except Exception as e:
 
 st.divider()
 st.caption("Dashboard auto-refreshes every 5 seconds")
-
-# EDUCATIONAL NOTE - Auto-Refresh Pattern:
-# Streamlit doesn't have built-in auto-refresh. We implement it by:
-# 1. Sleeping for the refresh interval
-# 2. Calling st.rerun() to re-execute the entire script
-#
-# This creates a real-time dashboard effect. Alternatives:
-# - st.experimental_fragment() for partial updates (experimental)
-# - WebSocket connections for push-based updates
-# - Streamlit's st.write_stream() for streaming data
-#
-# Note: This blocks the Python process during sleep. For production,
-# consider using st.empty() with a placeholder pattern instead.
 time.sleep(5)
 st.rerun()

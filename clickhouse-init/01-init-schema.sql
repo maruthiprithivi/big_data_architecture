@@ -8,128 +8,128 @@ USE blockchain_data;
 
 -- Ethereum Blocks Table
 CREATE TABLE IF NOT EXISTS ethereum_blocks (
-    block_number UInt64,
-    block_hash String,
-    timestamp DateTime,
-    parent_hash String,
-    miner String,
-    difficulty UInt64,
-    total_difficulty String,
-    size UInt32,
-    gas_limit UInt64,
-    gas_used UInt64,
-    transaction_count UInt32,
-    collected_at DateTime DEFAULT now(),
-    source String DEFAULT 'ethereum'
+    block_number UInt64 CODEC(Delta, ZSTD(3)),
+    block_hash String CODEC(ZSTD(3)),
+    timestamp DateTime CODEC(Delta, ZSTD(3)),
+    parent_hash String CODEC(ZSTD(3)),
+    miner String CODEC(ZSTD(3)),
+    difficulty UInt64 CODEC(Delta, ZSTD(3)),
+    total_difficulty String CODEC(ZSTD(3)),
+    size UInt32 CODEC(ZSTD(3)),
+    gas_limit UInt64 CODEC(Delta, ZSTD(3)),
+    gas_used UInt64 CODEC(Delta, ZSTD(3)),
+    transaction_count UInt32 CODEC(ZSTD(3)),
+    collected_at DateTime DEFAULT now() CODEC(Delta, ZSTD(3)),
+    source String DEFAULT 'ethereum' CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (timestamp, block_number)
 PARTITION BY toYYYYMM(timestamp);
 
 -- Ethereum Transactions Table
 CREATE TABLE IF NOT EXISTS ethereum_transactions (
-    tx_hash String,
-    block_number UInt64,
-    block_hash String,
-    from_address String,
-    to_address String,
-    value String,
-    gas UInt64,
-    gas_price String,
-    nonce UInt64,
-    transaction_index UInt32,
-    timestamp DateTime,
-    collected_at DateTime DEFAULT now(),
-    source String DEFAULT 'ethereum'
+    tx_hash String CODEC(ZSTD(3)),
+    block_number UInt64 CODEC(Delta, ZSTD(3)),
+    block_hash String CODEC(ZSTD(3)),
+    from_address String CODEC(ZSTD(3)),
+    to_address String CODEC(ZSTD(3)),
+    value String CODEC(ZSTD(3)),
+    gas UInt64 CODEC(Delta, ZSTD(3)),
+    gas_price String CODEC(ZSTD(3)),
+    nonce UInt64 CODEC(Delta, ZSTD(3)),
+    transaction_index UInt32 CODEC(ZSTD(3)),
+    timestamp DateTime CODEC(Delta, ZSTD(3)),
+    collected_at DateTime DEFAULT now() CODEC(Delta, ZSTD(3)),
+    source String DEFAULT 'ethereum' CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (timestamp, block_number, transaction_index)
 PARTITION BY toYYYYMM(timestamp);
 
 -- Bitcoin Blocks Table
 CREATE TABLE IF NOT EXISTS bitcoin_blocks (
-    block_height UInt64,
-    block_hash String,
-    timestamp DateTime,
-    previous_block_hash String,
-    merkle_root String,
-    difficulty UInt64,
-    nonce UInt64,
-    size UInt32,
-    weight UInt32,
-    transaction_count UInt32,
-    collected_at DateTime DEFAULT now(),
-    source String DEFAULT 'bitcoin'
+    block_height UInt64 CODEC(Delta, ZSTD(3)),
+    block_hash String CODEC(ZSTD(3)),
+    timestamp DateTime CODEC(Delta, ZSTD(3)),
+    previous_block_hash String CODEC(ZSTD(3)),
+    merkle_root String CODEC(ZSTD(3)),
+    difficulty UInt64 CODEC(Delta, ZSTD(3)),
+    nonce UInt64 CODEC(ZSTD(3)),
+    size UInt32 CODEC(ZSTD(3)),
+    weight UInt32 CODEC(ZSTD(3)),
+    transaction_count UInt32 CODEC(ZSTD(3)),
+    collected_at DateTime DEFAULT now() CODEC(Delta, ZSTD(3)),
+    source String DEFAULT 'bitcoin' CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (timestamp, block_height)
 PARTITION BY toYYYYMM(timestamp);
 
 -- Bitcoin Transactions Table
 CREATE TABLE IF NOT EXISTS bitcoin_transactions (
-    tx_hash String,
-    block_height UInt64,
-    block_hash String,
-    size UInt32,
-    weight UInt32,
-    fee UInt64,
-    input_count UInt32,
-    output_count UInt32,
-    timestamp DateTime,
-    collected_at DateTime DEFAULT now(),
-    source String DEFAULT 'bitcoin'
+    tx_hash String CODEC(ZSTD(3)),
+    block_height UInt64 CODEC(Delta, ZSTD(3)),
+    block_hash String CODEC(ZSTD(3)),
+    size UInt32 CODEC(ZSTD(3)),
+    weight UInt32 CODEC(ZSTD(3)),
+    fee UInt64 CODEC(Delta, ZSTD(3)),
+    input_count UInt32 CODEC(ZSTD(3)),
+    output_count UInt32 CODEC(ZSTD(3)),
+    timestamp DateTime CODEC(Delta, ZSTD(3)),
+    collected_at DateTime DEFAULT now() CODEC(Delta, ZSTD(3)),
+    source String DEFAULT 'bitcoin' CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (timestamp, block_height)
 PARTITION BY toYYYYMM(timestamp);
 
 -- Solana Blocks Table
 CREATE TABLE IF NOT EXISTS solana_blocks (
-    slot UInt64,
-    block_height UInt64,
-    block_hash String,
-    timestamp DateTime,
-    parent_slot UInt64,
-    previous_block_hash String,
-    transaction_count UInt32,
-    collected_at DateTime DEFAULT now(),
-    source String DEFAULT 'solana'
+    slot UInt64 CODEC(Delta, ZSTD(3)),
+    block_height UInt64 CODEC(Delta, ZSTD(3)),
+    block_hash String CODEC(ZSTD(3)),
+    timestamp DateTime CODEC(Delta, ZSTD(3)),
+    parent_slot UInt64 CODEC(Delta, ZSTD(3)),
+    previous_block_hash String CODEC(ZSTD(3)),
+    transaction_count UInt32 CODEC(ZSTD(3)),
+    collected_at DateTime DEFAULT now() CODEC(Delta, ZSTD(3)),
+    source String DEFAULT 'solana' CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (timestamp, slot)
 PARTITION BY toYYYYMM(timestamp);
 
 -- Solana Transactions Table
 CREATE TABLE IF NOT EXISTS solana_transactions (
-    signature String,
-    slot UInt64,
-    block_hash String,
-    fee UInt64,
-    status String,
-    timestamp DateTime,
-    collected_at DateTime DEFAULT now(),
-    source String DEFAULT 'solana'
+    signature String CODEC(ZSTD(3)),
+    slot UInt64 CODEC(Delta, ZSTD(3)),
+    block_hash String CODEC(ZSTD(3)),
+    fee UInt64 CODEC(Delta, ZSTD(3)),
+    status String CODEC(ZSTD(3)),
+    timestamp DateTime CODEC(Delta, ZSTD(3)),
+    collected_at DateTime DEFAULT now() CODEC(Delta, ZSTD(3)),
+    source String DEFAULT 'solana' CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (timestamp, slot)
 PARTITION BY toYYYYMM(timestamp);
 
 -- Collection Metrics Table (for monitoring)
 CREATE TABLE IF NOT EXISTS collection_metrics (
-    metric_time DateTime,
-    source String,
-    records_collected UInt32,
-    collection_duration_ms UInt32,
-    error_count UInt32,
-    error_message String,
-    collected_at DateTime DEFAULT now()
+    metric_time DateTime CODEC(Delta, ZSTD(3)),
+    source String CODEC(ZSTD(3)),
+    records_collected UInt32 CODEC(ZSTD(3)),
+    collection_duration_ms UInt32 CODEC(ZSTD(3)),
+    error_count UInt32 CODEC(ZSTD(3)),
+    error_message String CODEC(ZSTD(3)),
+    collected_at DateTime DEFAULT now() CODEC(Delta, ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (metric_time, source)
 PARTITION BY toYYYYMM(metric_time);
 
 -- Collection State Table (for tracking collection status)
 CREATE TABLE IF NOT EXISTS collection_state (
-    id UInt8 DEFAULT 1,
-    is_running Boolean,
-    started_at Nullable(DateTime),
-    stopped_at Nullable(DateTime),
-    total_records UInt64,
-    total_size_bytes UInt64,
-    updated_at DateTime DEFAULT now()
+    id UInt8 DEFAULT 1 CODEC(ZSTD(3)),
+    is_running Boolean CODEC(ZSTD(3)),
+    started_at Nullable(DateTime) CODEC(Delta, ZSTD(3)),
+    stopped_at Nullable(DateTime) CODEC(Delta, ZSTD(3)),
+    total_records UInt64 CODEC(Delta, ZSTD(3)),
+    total_size_bytes UInt64 CODEC(Delta, ZSTD(3)),
+    updated_at DateTime DEFAULT now() CODEC(Delta, ZSTD(3))
 ) ENGINE = ReplacingMergeTree(updated_at)
 ORDER BY id;
 

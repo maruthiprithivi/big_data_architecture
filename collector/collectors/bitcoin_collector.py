@@ -31,6 +31,7 @@ new UTXOs (outputs).
 import logging
 from datetime import datetime
 import aiohttp
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,77 @@ class BitcoinCollector:
         self.enabled = enabled
         # Track last processed block to collect sequentially
         self.last_block_height = None
+        # Retry and backoff state for resilient API calls
+        self.retry_delay = 1  # Start with 1 second
+        self.max_retry_delay = 300  # Max 5 minutes
+        self.last_successful_collect = None
+
+    async def _api_call_with_retry(self, session, url, max_retries=3, return_type='json'):
+        """
+        Make API call with exponential backoff for rate limits and transient failures.
+
+        EDUCATIONAL NOTE - Resilient API Calls:
+        Public APIs can fail for many reasons: rate limits, network issues, temporary
+        outages. Exponential backoff (1s, 2s, 4s, 8s...) prevents overwhelming the
+        server while allowing recovery from transient failures.
+
+        Args:
+            session: aiohttp ClientSession
+            url: Full URL to fetch
+            max_retries: Maximum number of retry attempts
+            return_type: 'json' or 'text' for response parsing
+
+        Returns:
+            Parsed response (dict/list for JSON, str for text)
+
+        Raises:
+            Exception: After all retries exhausted
+        """
+        for attempt in range(max_retries):
+            try:
+                timeout = aiohttp.ClientTimeout(total=10)
+                async with session.get(url, timeout=timeout) as resp:
+                    # Check for rate limiting
+                    if resp.status == 429:
+                        retry_after = int(resp.headers.get('Retry-After', self.retry_delay))
+                        logger.warning(f"Rate limited by Blockstream API, waiting {retry_after}s")
+                        await asyncio.sleep(retry_after)
+                        self.retry_delay = min(self.retry_delay * 2, self.max_retry_delay)
+                        continue
+
+                    # Check for "block not found" (404) - not an error, just no new block yet
+                    if resp.status == 404:
+                        logger.info("Bitcoin block not found - waiting for next block to be mined")
+                        return None
+
+                    # Check for other HTTP errors
+                    if resp.status >= 400:
+                        error_text = await resp.text()
+                        logger.warning(f"HTTP {resp.status} error on {url}: {error_text[:100]}")
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(2 ** attempt)
+                            continue
+                        else:
+                            raise Exception(f"HTTP {resp.status}: {error_text[:100]}")
+
+                    # Success - parse response
+                    if return_type == 'json':
+                        return await resp.json()
+                    else:
+                        return await resp.text()
+
+            except asyncio.TimeoutError:
+                logger.warning(f"Timeout on {url}, attempt {attempt + 1}/{max_retries}")
+                if attempt == max_retries - 1:
+                    raise
+                await asyncio.sleep(2 ** attempt)
+            except aiohttp.ClientError as e:
+                logger.warning(f"Connection error on {url}: {e}, attempt {attempt + 1}/{max_retries}")
+                if attempt == max_retries - 1:
+                    raise
+                await asyncio.sleep(2 ** attempt)
+
+        raise Exception(f"Failed to fetch {url} after {max_retries} attempts")
 
     async def collect(self, client):
         """
@@ -92,8 +164,12 @@ class BitcoinCollector:
             # one API response.
             async with aiohttp.ClientSession() as session:
                 # Get the current blockchain height (number of blocks)
-                async with session.get(f"{self.rpc_url}/blocks/tip/height") as resp:
-                    latest_height = int(await resp.text())
+                latest_height_str = await self._api_call_with_retry(
+                    session, f"{self.rpc_url}/blocks/tip/height", return_type='text'
+                )
+                if latest_height_str is None:
+                    return  # API temporarily unavailable
+                latest_height = int(latest_height_str)
 
                 # If first run, start from latest block
                 if self.last_block_height is None:
@@ -105,20 +181,30 @@ class BitcoinCollector:
 
                     # Bitcoin requires two API calls: first get hash, then get block
                     # This is because blocks are identified by hash, not height
-                    async with session.get(f"{self.rpc_url}/block-height/{block_height}") as resp:
-                        block_hash = await resp.text()
+                    block_hash = await self._api_call_with_retry(
+                        session, f"{self.rpc_url}/block-height/{block_height}", return_type='text'
+                    )
+                    if block_hash is None:
+                        return  # Block not found yet (404) - waiting for next block to be mined
 
-                    async with session.get(f"{self.rpc_url}/block/{block_hash}") as resp:
-                        block = await resp.json()
+                    block = await self._api_call_with_retry(
+                        session, f"{self.rpc_url}/block/{block_hash}", return_type='json'
+                    )
+                    if block is None:
+                        return  # Block not available
 
                     # EDUCATIONAL NOTE - Fetching Transaction IDs:
                     # The Blockstream API's /block/{hash} endpoint returns block metadata only.
                     # To get transaction IDs, we need a separate API call to /block/{hash}/txids
                     # This returns an array of transaction hashes (txids) that we can then query.
-                    async with session.get(f"{self.rpc_url}/block/{block_hash}/txids") as resp:
-                        all_tx_ids = await resp.json()
-                        # Limit to 25 transactions for educational purposes (explained below)
-                        tx_ids = all_tx_ids[:25]
+                    all_tx_ids = await self._api_call_with_retry(
+                        session, f"{self.rpc_url}/block/{block_hash}/txids", return_type='json'
+                    )
+                    if all_tx_ids is None:
+                        return  # Transaction IDs not available
+
+                    # Limit to 25 transactions for educational purposes (explained below)
+                    tx_ids = all_tx_ids[:25]
 
                     # EDUCATIONAL NOTE - Bitcoin Block Structure:
                     #
@@ -183,8 +269,12 @@ class BitcoinCollector:
 
                     for tx_id in tx_ids:
                         try:
-                            async with session.get(f"{self.rpc_url}/tx/{tx_id}") as resp:
-                                tx = await resp.json()
+                            tx = await self._api_call_with_retry(
+                                session, f"{self.rpc_url}/tx/{tx_id}", return_type='json'
+                            )
+                            if tx is None:
+                                logger.warning(f"Could not fetch Bitcoin tx {tx_id}")
+                                continue
 
                             # EDUCATIONAL NOTE - Bitcoin Transaction Structure (UTXO Model):
                             #
@@ -236,6 +326,9 @@ class BitcoinCollector:
                         records_collected += len(tx_data)
 
                     self.last_block_height = block_height
+                    self.last_successful_collect = datetime.now()
+                    # Reduce retry delay on successful collection
+                    self.retry_delay = max(1, self.retry_delay // 2)
                     logger.info(f"Collected Bitcoin block {block_height} with {len(tx_data)} transactions")
 
         except Exception as e:
