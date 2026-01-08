@@ -45,17 +45,26 @@ services:
       context: ./dashboard
       dockerfile: Dockerfile
     container_name: blockchain-dashboard
-    env_file:
-      - .env
+    environment:
+      - NODE_ENV=production
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB}
+      - COLLECTOR_URL=http://collector:8000
+      - MAX_COLLECTION_TIME_MINUTES=${MAX_COLLECTION_TIME_MINUTES:-10}
+      - MAX_DATA_SIZE_GB=${MAX_DATA_SIZE_GB:-5}
+      - NEXT_PUBLIC_MAX_COLLECTION_TIME_MINUTES=${MAX_COLLECTION_TIME_MINUTES:-10}
+      - NEXT_PUBLIC_MAX_DATA_SIZE_GB=${MAX_DATA_SIZE_GB:-5}
     ports:
-      - "8501:8501"
+      - "3001:3000"
     depends_on:
       - clickhouse
       - collector
     networks:
       - blockchain-network
-    volumes:
-      - ./dashboard:/app
+    restart: unless-stopped
 
 networks:
   blockchain-network:

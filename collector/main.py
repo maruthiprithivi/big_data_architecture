@@ -256,6 +256,9 @@ async def collect_data():
         VALUES (1, true, now(), 0, 0, now())
     """)
 
+    # Capture started_at timestamp to preserve in subsequent updates
+    started_at = datetime.now()
+
     try:
         while is_collecting:
             # Check safety limits before each collection cycle
@@ -349,8 +352,8 @@ async def collect_data():
 
                 # Update state with current totals
                 client.command(f"""
-                    INSERT INTO collection_state (id, is_running, total_records, total_size_bytes, updated_at)
-                    VALUES (1, true, {total_records}, {total_size}, now())
+                    INSERT INTO collection_state (id, is_running, started_at, total_records, total_size_bytes, updated_at)
+                    VALUES (1, true, '{started_at.isoformat()}', {total_records}, {total_size}, now())
                 """)
             except Exception as e:
                 logger.error(f"Error updating totals: {e}")
@@ -362,10 +365,17 @@ async def collect_data():
         logger.error(f"Error in collection loop: {e}")
     finally:
         # Always update state to stopped when exiting, regardless of how we exit
-        client.command("""
-            INSERT INTO collection_state (id, is_running, stopped_at, updated_at)
-            VALUES (1, false, now(), now())
-        """)
+        # Preserve started_at if available
+        if 'started_at' in locals():
+            client.command(f"""
+                INSERT INTO collection_state (id, is_running, started_at, stopped_at, updated_at)
+                VALUES (1, false, '{started_at.isoformat()}', now(), now())
+            """)
+        else:
+            client.command("""
+                INSERT INTO collection_state (id, is_running, stopped_at, updated_at)
+                VALUES (1, false, now(), now())
+            """)
         logger.info("Data collection stopped")
 
 

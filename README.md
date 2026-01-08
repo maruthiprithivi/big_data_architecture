@@ -1,6 +1,6 @@
-# Blockchain Data Ingestion with ClickHouse and Streamlit
+# Blockchain Data Ingestion with ClickHouse and Next.js
 
-A complete, containerized system for ingesting blockchain data from **Bitcoin** and **Solana** into a local ClickHouse database. This educational project demonstrates a modern data engineering pipeline for blockchain analytics, featuring a FastAPI-based data collector and a real-time Streamlit monitoring dashboard.
+A complete, containerized system for ingesting blockchain data from **Bitcoin** and **Solana** into a local ClickHouse database. This educational project demonstrates a modern data engineering pipeline for blockchain analytics, featuring a FastAPI-based data collector and a real-time Next.js monitoring dashboard.
 
 ## What This Project Does
 
@@ -60,7 +60,7 @@ Analyzing both chains demonstrates how different blockchain architectures affect
 
 - **Multi-Blockchain Support**: Simultaneously collects data from Bitcoin and Solana using free public RPC endpoints
 - **High-Performance Ingestion**: Leverages FastAPI for asynchronous data collection and ClickHouse for fast, columnar data storage
-- **Real-Time Dashboard**: Streamlit application provides live metrics including record counts, events per second, and storage statistics
+- **Real-Time Dashboard**: Next.js dashboard provides live metrics including record counts, events per second, and storage statistics
 - **Resilient Collection**: Automatic retry with exponential backoff for API failures, rate limits, and connection errors
 - **Data Compression**: ZSTD compression with column-level codecs achieves 30-70% storage reduction for blockchain data
 - **Health Monitoring**: Enhanced health check endpoint with per-blockchain metrics and error tracking
@@ -77,9 +77,9 @@ The system consists of three containerized services orchestrated by Docker Compo
 |---------|-----------|---------|
 | **ClickHouse Server** | ClickHouse | Columnar database for storing blockchain data with automatic schema initialization |
 | **FastAPI Collector** | Python, FastAPI | Asynchronous data collection from blockchain RPC endpoints with REST API control |
-| **Streamlit Dashboard** | Python, Streamlit | Real-time monitoring interface with start/stop controls and performance metrics |
+| **Next.js Dashboard** | TypeScript, Next.js, React | Real-time monitoring interface with start/stop controls and performance metrics |
 
-**Data Flow**: RPC Endpoints → FastAPI Collector → ClickHouse Database ← Streamlit Dashboard
+**Data Flow**: RPC Endpoints → FastAPI Collector → ClickHouse Database ← Next.js Dashboard
 
 ### Architecture Diagram
 
@@ -103,13 +103,13 @@ flowchart TB
             SOL_TABLES["solana_blocks<br/>solana_transactions"]
         end
 
-        subgraph Dashboard["dashboard:8501"]
-            STREAMLIT["Streamlit<br/>Dashboard"]
+        subgraph Dashboard["dashboard:3001"]
+            NEXTJS["Next.js<br/>Dashboard"]
         end
     end
 
     subgraph User["User Interface"]
-        BROWSER["Web Browser<br/>localhost:8501"]
+        BROWSER["Web Browser<br/>localhost:3001"]
     end
 
     BTC_API -->|"REST API"| BTC_COLL
@@ -121,17 +121,17 @@ flowchart TB
     CH_DB --- BTC_TABLES
     CH_DB --- SOL_TABLES
 
-    STREAMLIT <-->|"SQL Queries"| CH_DB
-    STREAMLIT <-->|"HTTP API"| FASTAPI
+    NEXTJS <-->|"SQL Queries"| CH_DB
+    NEXTJS <-->|"HTTP API"| FASTAPI
 
-    BROWSER <-->|"HTTP"| STREAMLIT
+    BROWSER <-->|"HTTP"| NEXTJS
 ```
 
 **How It Works:**
 
 1. **Collection Phase**: The FastAPI collector service pulls data from Bitcoin and Solana RPC endpoints concurrently using async/await patterns
 2. **Storage Phase**: Collected blocks and transactions are inserted into ClickHouse tables optimized for analytical queries
-3. **Visualization Phase**: The Streamlit dashboard queries ClickHouse for real-time metrics and displays interactive charts
+3. **Visualization Phase**: The Next.js dashboard queries ClickHouse for real-time metrics and displays interactive charts
 4. **Control Phase**: Users can start/stop collection via the dashboard, which sends HTTP requests to the collector API
 
 ## Getting Started
@@ -232,7 +232,7 @@ docker compose up --build -d
    # STATUS should include "(healthy)" after ~30 seconds
    ```
 
-3. Dashboard loads at http://localhost:8501
+3. Dashboard loads at http://localhost:3001
    - Should show "Collection Status" with "Stopped" indicator (this is correct!)
 
 4. No error messages in logs:
@@ -246,11 +246,11 @@ docker compose up --build -d
 **What's happening during startup:**
 - ClickHouse creates 8 database tables (bitcoin_blocks, solana_transactions, collection_metrics, etc.)
 - Collector connects to blockchain RPC endpoints (Blockstream for Bitcoin, Solana mainnet)
-- Dashboard starts Streamlit web interface on port 8501
+- Dashboard starts Next.js web interface on port 3001
 
 **4. Access the dashboard**
 
-Open your browser and navigate to: **http://localhost:8501**
+Open your browser and navigate to: **http://localhost:3001**
 
 **5. Start collecting data**
 
@@ -508,11 +508,15 @@ curl -u default:clickhouse_password "http://localhost:8123/?query=SELECT+count()
 |------------|---------|---------------|
 | **Python 3.11** | Programming language | [python.org](https://www.python.org/) |
 | **FastAPI** | Async web framework for collector API | [fastapi.tiangolo.com](https://fastapi.tiangolo.com/) |
-| **Streamlit** | Dashboard and data visualization | [streamlit.io](https://streamlit.io/) |
+| **Next.js 15** | React framework for dashboard | [nextjs.org](https://nextjs.org/) |
+| **TypeScript** | Type-safe JavaScript for frontend | [typescriptlang.org](https://www.typescriptlang.org/) |
 | **ClickHouse** | Columnar OLAP database | [clickhouse.com](https://clickhouse.com/) |
 | **Docker** | Containerization platform | [docker.com](https://www.docker.com/) |
 | **clickhouse-connect** | Python client for ClickHouse | [GitHub](https://github.com/ClickHouse/clickhouse-connect) |
 | **aiohttp** | Async HTTP client for RPC calls | [docs.aiohttp.org](https://docs.aiohttp.org/) |
+| **SWR** | React hooks for data fetching | [swr.vercel.app](https://swr.vercel.app/) |
+| **Recharts** | Charting library for React | [recharts.org](https://recharts.org/) |
+| **Tailwind CSS v4** | Utility-first CSS framework | [tailwindcss.com](https://tailwindcss.com/) |
 
 ## API Endpoints
 
@@ -732,8 +736,9 @@ This project is designed for teaching the following concepts:
 3. **Database Design**: Columnar storage, partitioning, and compression in ClickHouse
 4. **API Development**: RESTful APIs with FastAPI for service control
 5. **Containerization**: Docker Compose for multi-service orchestration
-6. **Data Visualization**: Real-time dashboards with Streamlit
+6. **Data Visualization**: Real-time dashboards with Next.js and React
 7. **SQL Analytics**: Complex queries for time-series and aggregate analysis
+8. **Full-Stack Development**: TypeScript, React, Server Components, and API Routes
 
 ### The 5Vs of Big Data
 
@@ -845,7 +850,7 @@ This project is provided for educational purposes. Please ensure compliance with
 - [Solana RPC API Documentation](https://docs.solana.com/api/http)
 - [ClickHouse Documentation](https://clickhouse.com/docs/en/intro)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [Streamlit Documentation](https://docs.streamlit.io/)
+- [Next.js Documentation](https://nextjs.org/docs)
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
 
 ---

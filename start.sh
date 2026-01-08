@@ -18,7 +18,7 @@ docker compose up --build -d
 echo ""
 echo "✓ Services starting..."
 echo ""
-echo "📊 Dashboard: http://localhost:8501"
+echo "📊 Dashboard: http://localhost:3001"
 echo "🔌 API: http://localhost:8000"
 echo "🗄️  ClickHouse: localhost:8123"
 echo ""

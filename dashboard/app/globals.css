@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bitcoin: #F7931A;
+  --color-bitcoin-light: #FF6B35;
+  --color-solana-green: #14F195;
+  --color-solana-purple: #9945FF;
+  --color-primary: #3B82F6;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+}
+
+@layer base {
+  body {
+    background-color: #f9fafb;
+    color: #111827;
+  }
+}

@@ -93,6 +93,8 @@ class BitcoinCollector:
         self.retry_delay = 1  # Start with 1 second
         self.max_retry_delay = 300  # Max 5 minutes
         self.last_successful_collect = None
+        # Initialize data validator for quality checks
+        self.validator = DataValidator()
 
     async def _api_call_with_retry(self, session, url, max_retries=3, return_type='json'):
         """
@@ -160,10 +162,6 @@ class BitcoinCollector:
                 await asyncio.sleep(2 ** attempt)
 
         raise Exception(f"Failed to fetch {url} after {max_retries} attempts")
-
-        # [VERACITY] Initialize data validator for quality checks
-        # This ensures we catch bad data before it enters our analytics database
-        self.validator = DataValidator()
 
     async def collect(self, client):
         """
