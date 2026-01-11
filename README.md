@@ -999,4 +999,59 @@ This project is provided for educational purposes. Please ensure compliance with
 
 ---
 
+## For Instructors: Distribution Checklist
+
+Before distributing this project to students, verify the following:
+
+### Pre-Distribution Checks
+
+1. **Commit all changes**
+   ```bash
+   git status  # Should show "nothing to commit, working tree clean"
+   ```
+
+2. **Clear development data** (optional)
+   ```bash
+   docker compose down -v  # Removes all collected data
+   ```
+
+3. **Verify .gitignore**
+   ```bash
+   # Should NOT see these in git status:
+   # - node_modules/, .next/, __pycache__/, data/
+   ```
+
+4. **Test clean deployment**
+   ```bash
+   # Fresh clone and run
+   git clone <your-repo-url> test-deployment
+   cd test-deployment
+   ./scripts/start.sh
+   # Verify dashboard opens at http://localhost:3001
+   ```
+
+### Student Setup Verification
+
+Provide students with this checklist:
+
+- [ ] Docker Desktop installed and running
+- [ ] Git installed (`git --version`)
+- [ ] 10GB+ free disk space (`df -h`)
+- [ ] Internet connection (for pulling Docker images)
+- [ ] Ports 3001, 8000, 8123 available
+
+**Common student issues**:
+- Using old `docker-compose` (hyphenated) instead of `docker compose` (V2)
+- Not copying `.env.example` to `.env`
+- Running out of disk space during collection
+- Firewall blocking Docker ports
+
+### Support Resources
+
+- Primary: TROUBLESHOOTING.md (covers 90% of issues)
+- Secondary: GitHub Discussions or Issues
+- Fallback: Office hours or TA support
+
+---
+
 **Built for blockchain data education**
