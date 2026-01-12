@@ -3,7 +3,7 @@ services:
   # NOTE: Default password is 'clickhouse_password' (development only)
   # For production: Generate strong password and update CLICKHOUSE_PASSWORD in .env
   clickhouse:
-    image: clickhouse/clickhouse-server:24.1.8-alpine  # Pinned version for reproducibility
+    image: clickhouse/clickhouse-server:25.10-alpine  # Pinned version for reproducibility and compatibility
     container_name: clickhouse
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DB}

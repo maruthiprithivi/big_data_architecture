@@ -29,6 +29,19 @@ if [ ! -f .env ]; then
     echo ""
 fi
 
+# Verify Docker image versions
+echo "📋 Verifying Docker image versions..."
+CLICKHOUSE_VERSION=$(grep "clickhouse/clickhouse-server:" docker-compose.yml | awk -F: '{print $3}' | awk '{print $1}')
+EXPECTED_CLICKHOUSE="25.10-alpine"
+
+if [ "$CLICKHOUSE_VERSION" != "$EXPECTED_CLICKHOUSE" ]; then
+    echo "⚠️  WARNING: ClickHouse version mismatch!"
+    echo "   Expected: $EXPECTED_CLICKHOUSE"
+    echo "   Found:    $CLICKHOUSE_VERSION"
+    echo "   Please check docker-compose.yml and docs/DOCKER_VERSIONS.md"
+    echo ""
+fi
+
 # Start services
 echo "Starting Docker containers..."
 docker compose up --build -d

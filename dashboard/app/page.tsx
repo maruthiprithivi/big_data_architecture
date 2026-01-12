@@ -223,7 +223,11 @@ export default function DashboardPage() {
             {
               key: 'block_hash',
               label: 'Block Hash',
-              format: (val) => `${val.slice(0, 12)}...${val.slice(-8)}`
+              format: (val) => {
+                const str = String(val || '')
+                if (str.length <= 20) return str
+                return `${str.slice(0, 12)}...${str.slice(-8)}`
+              }
             },
             {
               key: 'timestamp',
@@ -252,7 +256,11 @@ export default function DashboardPage() {
             {
               key: 'tx_hash',
               label: 'Tx Hash',
-              format: (val) => `${val.slice(0, 12)}...${val.slice(-8)}`
+              format: (val) => {
+                const str = String(val || '')
+                if (str.length <= 20) return str
+                return `${str.slice(0, 12)}...${str.slice(-8)}`
+              }
             },
             { key: 'block_height', label: 'Block' },
             {
@@ -280,7 +288,11 @@ export default function DashboardPage() {
             {
               key: 'block_hash',
               label: 'Block Hash',
-              format: (val) => `${val.slice(0, 12)}...${val.slice(-8)}`
+              format: (val) => {
+                const str = String(val || '')
+                if (str.length <= 20) return str
+                return `${str.slice(0, 12)}...${str.slice(-8)}`
+              }
             },
             {
               key: 'timestamp',
@@ -300,7 +312,11 @@ export default function DashboardPage() {
             {
               key: 'signature',
               label: 'Signature',
-              format: (val) => `${val.slice(0, 12)}...${val.slice(-8)}`
+              format: (val) => {
+                const str = String(val || '')
+                if (str.length <= 20) return str
+                return `${str.slice(0, 12)}...${str.slice(-8)}`
+              }
             },
             { key: 'slot', label: 'Slot' },
             {
