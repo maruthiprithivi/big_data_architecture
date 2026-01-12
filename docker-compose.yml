@@ -13,7 +13,8 @@ services:
       - "8123:8123"
       - "9000:9000"
     volumes:
-      - ./data/clickhouse:/var/lib/clickhouse
+      - clickhouse_data:/var/lib/clickhouse
+      # - ./data/clickhouse:/var/lib/clickhouse
       - ./clickhouse-init:/docker-entrypoint-initdb.d
     networks:
       - blockchain-network
@@ -73,3 +74,4 @@ networks:
 
 volumes:
   collector-state:
+  clickhouse_data:
