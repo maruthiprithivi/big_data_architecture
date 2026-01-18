@@ -40,6 +40,31 @@ Set-Location $ProjectRoot
 Write-Host "Working directory: $ProjectRoot" -ForegroundColor Gray
 Write-Host ""
 
+# Determine Docker Compose command
+$DockerComposeCmd = "docker"
+$DockerComposeArgs = @("compose")
+
+try {
+    docker compose version 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "No docker compose"
+    }
+} catch {
+    try {
+        docker-compose version 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            $DockerComposeCmd = "docker-compose"
+            $DockerComposeArgs = @()
+        } else {
+            throw "No docker-compose"
+        }
+    } catch {
+        Write-Host "ERROR: Neither 'docker compose' nor 'docker-compose' found." -ForegroundColor Red
+        Write-Host "Please install Docker Desktop for Windows." -ForegroundColor Red
+        exit 1
+    }
+}
+
 # Confirmation prompt
 Write-Host "========================================" -ForegroundColor Yellow
 Write-Host "         CLEANUP CONFIRMATION          " -ForegroundColor Yellow
@@ -78,13 +103,13 @@ Write-Host ""
 Write-Host "Step 1: Stopping and Removing Containers" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-$containers = docker compose ps -q 2>$null
+$containers = & $DockerComposeCmd $DockerComposeArgs ps -q 2>$null
 if ($containers) {
     Write-Host "Stopping containers..." -ForegroundColor Gray
-    docker compose stop 2>$null
+    & $DockerComposeCmd $DockerComposeArgs stop 2>$null
 
     Write-Host "Removing containers..." -ForegroundColor Gray
-    docker compose rm -f 2>$null
+    & $DockerComposeCmd $DockerComposeArgs rm -f 2>$null
 
     Write-Host "SUCCESS: Containers removed" -ForegroundColor Green
 } else {
@@ -205,6 +230,6 @@ Write-Host ""
 Write-Host "To restart the project, run:" -ForegroundColor Cyan
 Write-Host "  .\start.ps1" -ForegroundColor White
 Write-Host "  OR" -ForegroundColor Gray
-Write-Host "  docker compose up -d --build" -ForegroundColor White
+Write-Host "  $DockerComposeCmd $($DockerComposeArgs -join ' ') up -d --build" -ForegroundColor White
 Write-Host ""
 Write-Host "NOTE: You will start with a fresh database and no collected data" -ForegroundColor Yellow

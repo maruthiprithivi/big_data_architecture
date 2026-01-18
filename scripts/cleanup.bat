@@ -33,6 +33,22 @@ if exist "%SCRIPT_DIR%\docker-compose.yml" (
 REM Change to project root
 cd /d "%PROJECT_ROOT%"
 
+REM Determine Docker Compose command
+docker compose version >nul 2>&1
+if %errorlevel% equ 0 (
+    set "DOCKER_COMPOSE_CMD=docker compose"
+) else (
+    docker-compose version >nul 2>&1
+    if %errorlevel% equ 0 (
+        set "DOCKER_COMPOSE_CMD=docker-compose"
+    ) else (
+        echo ERROR: Neither 'docker compose' nor 'docker-compose' found.
+        echo Please install Docker Desktop for Windows.
+        pause
+        exit /b 1
+    )
+)
+
 echo.
 echo ========================================
 echo  CLEANUP CONFIRMATION
@@ -70,8 +86,8 @@ echo.
 
 REM Step 1: Stop and remove containers
 echo Step 1: Stopping and Removing Containers...
-docker compose stop 2>nul
-docker compose rm -f 2>nul
+%DOCKER_COMPOSE_CMD% stop 2>nul
+%DOCKER_COMPOSE_CMD% rm -f 2>nul
 echo   [OK] Containers removed
 echo.
 
@@ -133,7 +149,7 @@ echo.
 echo To restart the project, run:
 echo   start.bat
 echo   OR
-echo   docker compose up -d --build
+echo   %DOCKER_COMPOSE_CMD% up -d --build
 echo.
 echo NOTE: You will start with a fresh database.
 echo.
