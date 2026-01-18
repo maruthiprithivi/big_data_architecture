@@ -41,6 +41,22 @@ echo.
 echo Working directory: %PROJECT_ROOT%
 echo.
 
+REM Determine Docker Compose command
+docker compose version >nul 2>&1
+if %errorlevel% equ 0 (
+    set "DOCKER_COMPOSE_CMD=docker compose"
+) else (
+    docker-compose version >nul 2>&1
+    if %errorlevel% equ 0 (
+        set "DOCKER_COMPOSE_CMD=docker-compose"
+    ) else (
+        echo ERROR: Neither 'docker compose' nor 'docker-compose' found.
+        echo Please install Docker Desktop for Windows.
+        pause
+        exit /b 1
+    )
+)
+
 REM Check if Docker is running
 docker info >nul 2>&1
 if errorlevel 1 (
@@ -69,7 +85,7 @@ REM Start services
 echo Starting Docker containers...
 echo.
 
-docker compose up --build -d
+%DOCKER_COMPOSE_CMD% up --build -d
 
 if errorlevel 1 (
     echo.
@@ -91,8 +107,8 @@ echo   API:         http://localhost:8000
 echo   ClickHouse:  http://localhost:8123
 echo.
 echo Useful commands:
-echo   View logs:   docker compose logs -f
-echo   Stop:        docker compose down
+echo   View logs:   %DOCKER_COMPOSE_CMD% logs -f
+echo   Stop:        %DOCKER_COMPOSE_CMD% down
 echo.
 
 REM Ask if user wants to open dashboard
