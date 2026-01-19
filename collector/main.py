@@ -402,6 +402,9 @@ async def collect_data():
     except Exception as e:
         logger.error(f"Error in collection loop: {e}")
     finally:
+        # Reset internal state
+        is_collecting = False
+
         # Always update state to stopped when exiting, regardless of how we exit
         # Preserve started_at if available
         if 'started_at' in locals():

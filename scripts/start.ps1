@@ -31,6 +31,31 @@ Write-Host "Starting Blockchain Data Ingestion System..." -ForegroundColor Cyan
 Write-Host "Working directory: $ProjectRoot" -ForegroundColor Gray
 Write-Host ""
 
+# Determine Docker Compose command
+$DockerComposeCmd = "docker"
+$DockerComposeArgs = @("compose")
+
+try {
+    docker compose version 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "No docker compose"
+    }
+} catch {
+    try {
+        docker-compose version 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            $DockerComposeCmd = "docker-compose"
+            $DockerComposeArgs = @()
+        } else {
+            throw "No docker-compose"
+        }
+    } catch {
+        Write-Host "ERROR: Neither 'docker compose' nor 'docker-compose' found." -ForegroundColor Red
+        Write-Host "Please install Docker Desktop for Windows." -ForegroundColor Red
+        exit 1
+    }
+}
+
 # Check if Docker is running
 try {
     $dockerInfo = docker info 2>&1
@@ -38,7 +63,10 @@ try {
         throw "Docker not running"
     }
 } catch {
-    Write-Host "ERROR: Docker is not running!" -ForegroundColor Red
+    Write-Host "ERROR: Docker is not running or unreachable!" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Diagnostic information:" -ForegroundColor White
+    $dockerInfo | Write-Host -ForegroundColor Gray
     Write-Host ""
     Write-Host "Please start Docker Desktop first:" -ForegroundColor Yellow
     Write-Host "  1. Open Docker Desktop from the Start menu" -ForegroundColor Gray
@@ -77,9 +105,12 @@ if ($dockerComposeContent -match "clickhouse/clickhouse-server:([^\s]+)") {
 Write-Host "Starting Docker containers..." -ForegroundColor Cyan
 Write-Host ""
 
-docker compose up --build -d
+& $DockerComposeCmd $DockerComposeArgs up --build -d
 
 if ($LASTEXITCODE -eq 0) {
+    $LogCmd = "$DockerComposeCmd $($DockerComposeArgs -join ' ') logs -f"
+    $StopCmd = "$DockerComposeCmd $($DockerComposeArgs -join ' ') down"
+
     Write-Host ""
     Write-Host "SUCCESS: Services starting..." -ForegroundColor Green
     Write-Host ""
@@ -89,8 +120,8 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "  ClickHouse:  http://localhost:8123" -ForegroundColor White
     Write-Host ""
     Write-Host "Useful commands:" -ForegroundColor Cyan
-    Write-Host "  View logs:   docker compose logs -f" -ForegroundColor Gray
-    Write-Host "  Stop:        docker compose down" -ForegroundColor Gray
+    Write-Host "  View logs:   $LogCmd" -ForegroundColor Gray
+    Write-Host "  Stop:        $StopCmd" -ForegroundColor Gray
     Write-Host ""
 
     # Ask if user wants to open dashboard
