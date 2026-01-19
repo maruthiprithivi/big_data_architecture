@@ -60,7 +60,10 @@ if %errorlevel% equ 0 (
 REM Check if Docker is running
 docker info >nul 2>&1
 if errorlevel 1 (
-    echo ERROR: Docker is not running!
+    echo ERROR: Docker is not running or unreachable!
+    echo.
+    echo Diagnostic information:
+    docker info
     echo.
     echo Please start Docker Desktop first:
     echo   1. Open Docker Desktop from the Start menu

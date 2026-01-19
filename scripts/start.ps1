@@ -63,7 +63,10 @@ try {
         throw "Docker not running"
     }
 } catch {
-    Write-Host "ERROR: Docker is not running!" -ForegroundColor Red
+    Write-Host "ERROR: Docker is not running or unreachable!" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Diagnostic information:" -ForegroundColor White
+    $dockerInfo | Write-Host -ForegroundColor Gray
     Write-Host ""
     Write-Host "Please start Docker Desktop first:" -ForegroundColor Yellow
     Write-Host "  1. Open Docker Desktop from the Start menu" -ForegroundColor Gray
