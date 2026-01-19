@@ -3,7 +3,9 @@ services:
   # NOTE: Default password is 'clickhouse_password' (development only)
   # For production: Generate strong password and update CLICKHOUSE_PASSWORD in .env
   clickhouse:
-    image: clickhouse/clickhouse-server:25.10-alpine  # Pinned version for reproducibility and compatibility
+    # Using Ubuntu-based image for better cross-platform compatibility (Windows/Mac/Linux)
+    # Alpine images can have issues on Windows with WSL2
+    image: clickhouse/clickhouse-server:24.12
     container_name: clickhouse
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DB}
@@ -12,16 +14,22 @@ services:
     ports:
       - "8123:8123"
       - "9000:9000"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
     volumes:
-      - ./data/clickhouse:/var/lib/clickhouse
-      - ./clickhouse-init:/docker-entrypoint-initdb.d
+      # Using named volume instead of bind mount for better Windows compatibility
+      - clickhouse-data:/var/lib/clickhouse
+      - ./clickhouse-init:/docker-entrypoint-initdb.d:ro
     networks:
       - blockchain-network
     healthcheck:
       test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
   collector:
     build:
@@ -73,3 +81,4 @@ networks:
 
 volumes:
   collector-state:
+  clickhouse-data:

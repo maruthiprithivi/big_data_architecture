@@ -1,0 +1,30 @@
+# Windows-specific Docker Compose overrides
+# This file is automatically used by start.bat on Windows
+#
+# Key Windows-specific configurations:
+# - Ubuntu-based ClickHouse image (Alpine has compatibility issues with WSL2)
+# - Named volumes for data (bind mounts have permission issues on Windows)
+# - Increased healthcheck timeouts (WSL2 can be slower on first start)
+
+services:
+  clickhouse:
+    # Ubuntu-based image works better with Windows/WSL2
+    # Using 24.12 which is Ubuntu 22.04 based and well-tested
+    image: clickhouse/clickhouse-server:24.12
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      # Named volume avoids Windows permission issues with bind mounts
+      - clickhouse-data:/var/lib/clickhouse
+      - ./clickhouse-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # Longer timeouts for WSL2 which can be slower on cold start
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 45s
+
+volumes:
+  clickhouse-data:

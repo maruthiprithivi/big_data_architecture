@@ -84,18 +84,26 @@ echo  Starting Cleanup Process
 echo ========================================
 echo.
 
+REM Check if Windows-specific compose file exists
+if exist "docker-compose.windows.yml" (
+    set "COMPOSE_FILES=-f docker-compose.yml -f docker-compose.windows.yml"
+) else (
+    set "COMPOSE_FILES=-f docker-compose.yml"
+)
+
 REM Step 1: Stop and remove containers
 echo Step 1: Stopping and Removing Containers...
-%DOCKER_COMPOSE_CMD% stop 2>nul
-%DOCKER_COMPOSE_CMD% rm -f 2>nul
+%DOCKER_COMPOSE_CMD% %COMPOSE_FILES% stop 2>nul
+%DOCKER_COMPOSE_CMD% %COMPOSE_FILES% rm -f 2>nul
 echo   [OK] Containers removed
 echo.
 
-REM Step 2: Remove volumes
+REM Step 2: Remove volumes (including clickhouse-data named volume)
 echo Step 2: Removing Docker Volumes...
-for /f "tokens=*" %%v in ('docker volume ls -q 2^>nul ^| findstr /i "big_data_architecture blockchain"') do (
+for /f "tokens=*" %%v in ('docker volume ls -q 2^>nul ^| findstr /i "big_data_architecture blockchain clickhouse"') do (
     docker volume rm %%v 2>nul
 )
+%DOCKER_COMPOSE_CMD% %COMPOSE_FILES% down -v 2>nul
 echo   [OK] Volumes removed
 echo.
 

@@ -1,0 +1,25 @@
+# macOS-specific Docker Compose overrides
+# This file is automatically used by start.sh on macOS
+#
+# Key macOS-specific configurations:
+# - Alpine-based ClickHouse image (lighter, faster on macOS)
+# - Bind mount for data (works well on macOS)
+# - Standard healthcheck timeouts
+
+services:
+  clickhouse:
+    # Alpine image is lighter and works well on macOS
+    image: clickhouse/clickhouse-server:24.12-alpine
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      # Bind mount works well on macOS
+      - ./data/clickhouse:/var/lib/clickhouse
+      - ./clickhouse-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s

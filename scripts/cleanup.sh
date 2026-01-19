@@ -64,6 +64,21 @@ fi
 cd "$PROJECT_ROOT"
 print_info "Working directory: $PROJECT_ROOT"
 
+# Detect OS and set compose files
+OS_TYPE="$(uname -s)"
+case "$OS_TYPE" in
+    Darwin*|Linux*)
+        if [ -f "docker-compose.macos.yml" ]; then
+            COMPOSE_FILES="-f docker-compose.yml -f docker-compose.macos.yml"
+        else
+            COMPOSE_FILES="-f docker-compose.yml"
+        fi
+        ;;
+    *)
+        COMPOSE_FILES="-f docker-compose.yml"
+        ;;
+esac
+
 # Confirmation prompt
 print_section "CLEANUP CONFIRMATION"
 print_warning "This script will DELETE ALL deployed resources including:"
@@ -97,27 +112,29 @@ print_section "Starting Cleanup Process"
 
 # Step 1: Stop and remove containers
 print_section "Step 1: Stopping and Removing Containers"
-if docker compose ps -q 2>/dev/null | grep -q .; then
+if docker compose $COMPOSE_FILES ps -q 2>/dev/null | grep -q .; then
     print_info "Stopping containers..."
-    docker compose stop
+    docker compose $COMPOSE_FILES stop
 
     print_info "Removing containers..."
-    docker compose rm -f
+    docker compose $COMPOSE_FILES rm -f
 
     print_info "Containers removed successfully"
 else
     print_info "No running containers found"
 fi
 
-# Step 2: Remove volumes
+# Step 2: Remove volumes (including clickhouse-data named volume)
 print_section "Step 2: Removing Docker Volumes"
-if docker volume ls -q | grep -q "big_data_architecture\|blockchain"; then
+if docker volume ls -q | grep -q "big_data_architecture\|blockchain\|clickhouse"; then
     print_info "Removing Docker volumes..."
-    docker volume ls -q | grep "big_data_architecture\|blockchain" | xargs -r docker volume rm 2>/dev/null || true
+    docker volume ls -q | grep "big_data_architecture\|blockchain\|clickhouse" | xargs -r docker volume rm 2>/dev/null || true
     print_info "Volumes removed successfully"
 else
     print_info "No matching volumes found"
 fi
+# Also run docker compose down -v to ensure all compose-defined volumes are removed
+docker compose $COMPOSE_FILES down -v 2>/dev/null || true
 
 # Step 3: Remove networks
 print_section "Step 3: Removing Docker Networks"

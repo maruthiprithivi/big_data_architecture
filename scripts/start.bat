@@ -7,7 +7,7 @@ REM
 REM This script starts the Blockchain Data Ingestion System
 REM Just double-click to run, or run from Command Prompt
 REM
-REM For more features, use the PowerShell version: start.ps1
+REM Uses Windows-specific Docker Compose overrides for compatibility
 REM
 REM ========================================
 
@@ -36,6 +36,7 @@ cd /d "%PROJECT_ROOT%"
 echo.
 echo ========================================
 echo  Blockchain Data Ingestion System
+echo  Windows Edition
 echo ========================================
 echo.
 echo Working directory: %PROJECT_ROOT%
@@ -67,7 +68,7 @@ if errorlevel 1 (
     echo.
     echo Please start Docker Desktop first:
     echo   1. Open Docker Desktop from the Start menu
-    echo   2. Wait for it to fully start
+    echo   2. Wait for it to fully start ^(whale icon stops animating^)
     echo   3. Run this script again
     echo.
     echo If Docker Desktop is not installed, see docs\WINDOWS_SETUP.md
@@ -84,24 +85,69 @@ if not exist ".env" (
     echo.
 )
 
-REM Start services
+REM Clean up any previous failed containers
+echo Cleaning up any stale containers...
+%DOCKER_COMPOSE_CMD% down --remove-orphans >nul 2>&1
+
+REM Check if Windows-specific compose file exists
+if exist "docker-compose.windows.yml" (
+    set "COMPOSE_FILES=-f docker-compose.yml -f docker-compose.windows.yml"
+    echo Using Windows-optimized configuration...
+) else (
+    set "COMPOSE_FILES=-f docker-compose.yml"
+    echo Using default configuration...
+)
+
+echo.
 echo Starting Docker containers...
+echo This may take a few minutes on first run...
 echo.
 
-%DOCKER_COMPOSE_CMD% up --build -d
+%DOCKER_COMPOSE_CMD% %COMPOSE_FILES% up --build -d
 
 if errorlevel 1 (
     echo.
     echo ERROR: Failed to start services!
-    echo Check the error messages above and see docs\TROUBLESHOOTING.md
+    echo.
+    echo Troubleshooting steps:
+    echo   1. Make sure Docker Desktop is running and responsive
+    echo   2. Try: docker system prune -f
+    echo   3. Check: %DOCKER_COMPOSE_CMD% %COMPOSE_FILES% logs clickhouse
+    echo   4. See docs\TROUBLESHOOTING.md for more help
     echo.
     pause
     exit /b 1
 )
 
 echo.
+echo Waiting for services to become healthy...
+
+REM Wait for ClickHouse to be ready (up to 90 seconds)
+set /a "attempts=0"
+set /a "max_attempts=18"
+
+:wait_loop
+if %attempts% geq %max_attempts% (
+    echo.
+    echo WARNING: Services took longer than expected to start.
+    echo They may still be initializing. Check the dashboard in a moment.
+    goto :services_ready
+)
+
+%DOCKER_COMPOSE_CMD% %COMPOSE_FILES% ps clickhouse 2>nul | findstr /i "healthy" >nul
+if %errorlevel% equ 0 (
+    goto :services_ready
+)
+
+set /a "attempts+=1"
+echo   Waiting for ClickHouse... ^(%attempts%/%max_attempts%^)
+timeout /t 5 /nobreak >nul
+goto :wait_loop
+
+:services_ready
+echo.
 echo ========================================
-echo  SUCCESS: Services starting...
+echo  SUCCESS: Services are running!
 echo ========================================
 echo.
 echo Service URLs:
@@ -110,14 +156,15 @@ echo   API:         http://localhost:8000
 echo   ClickHouse:  http://localhost:8123
 echo.
 echo Useful commands:
-echo   View logs:   %DOCKER_COMPOSE_CMD% logs -f
-echo   Stop:        %DOCKER_COMPOSE_CMD% down
+echo   View logs:   %DOCKER_COMPOSE_CMD% %COMPOSE_FILES% logs -f
+echo   Stop:        %DOCKER_COMPOSE_CMD% %COMPOSE_FILES% down
+echo   Restart:     %DOCKER_COMPOSE_CMD% %COMPOSE_FILES% restart
 echo.
 
 REM Ask if user wants to open dashboard
 set /p "OPEN_BROWSER=Open dashboard in browser? (Y/n): "
 if /i not "%OPEN_BROWSER%"=="n" (
-    timeout /t 3 /nobreak >nul
+    timeout /t 2 /nobreak >nul
     start http://localhost:3001
 )
 

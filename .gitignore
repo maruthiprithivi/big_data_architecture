@@ -76,6 +76,8 @@ tests/
 
 # Claude Code
 .claude/
+tmpclaude-*/
+CLAUDE.md
 
 # Project plans
 plans/
