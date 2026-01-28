@@ -1,6 +1,7 @@
 # Environment variables
 .env
 .env.local
+.env.production
 .env.development.local
 .env.test.local
 .env.production.local
@@ -79,3 +80,18 @@ tests/
 
 # Project plans
 plans/
+
+# Production access information (contains connection details)
+PRODUCTION_ACCESS.md
+
+# Backup files
+*.bak
+*.backup
+/var/lib/blockchain-data/
+
+# rclone configuration (contains Backblaze credentials)
+.config/rclone/
+rclone.conf
+
+# Bitcoin Core data
+bitcoin-core/*.bak

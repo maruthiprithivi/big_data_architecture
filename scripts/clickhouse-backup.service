@@ -1,0 +1,18 @@
+[Unit]
+Description=ClickHouse Backup to Backblaze
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/blockchain-ingestion
+ExecStart=/opt/blockchain-ingestion/scripts/backup-to-backblaze.sh
+User=root
+StandardOutput=journal
+StandardError=journal
+
+# Timeout after 2 hours
+TimeoutStartSec=7200
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,41 @@
+<clickhouse>
+    <storage_configuration>
+        <disks>
+            <!-- Default local disk -->
+            <default>
+                <path>/var/lib/clickhouse/</path>
+                <keep_free_space_bytes>10737418240</keep_free_space_bytes>  <!-- Keep 10 GB free -->
+            </default>
+
+            <!-- Backblaze B2 S3-compatible storage -->
+            <backblaze_s3>
+                <type>s3</type>
+                <endpoint>https://s3.us-west-004.backblazeb2.com/typeless-crypto-data/</endpoint>
+                <access_key_id from_env="BACKBLAZE_KEY_ID"/>
+                <secret_access_key from_env="BACKBLAZE_APPLICATION_KEY"/>
+                <region>us-west-004</region>
+            </backblaze_s3>
+        </disks>
+
+        <policies>
+            <!-- Tiered storage policy: hot local data, cold Backblaze data -->
+            <tiered_storage>
+                <volumes>
+                    <!-- Hot tier: Recent data stays on local SSD -->
+                    <hot>
+                        <disk>default</disk>
+                        <max_data_part_size_bytes>10737418240</max_data_part_size_bytes>  <!-- Max 10 GB per part -->
+                    </hot>
+
+                    <!-- Cold tier: Older data moves to Backblaze -->
+                    <cold>
+                        <disk>backblaze_s3</disk>
+                    </cold>
+                </volumes>
+
+                <!-- Move data when local disk is 90% full -->
+                <move_factor>0.1</move_factor>
+            </tiered_storage>
+        </policies>
+    </storage_configuration>
+</clickhouse>

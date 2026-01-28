@@ -414,6 +414,170 @@ rm -rf data/clickhouse
 
 **Important:** Both cleanup methods permanently delete all collected blockchain data. This action is irreversible.
 
+## Production Deployment
+
+For continuous production operation on a remote server (e.g., Hetzner), this project includes comprehensive deployment automation with dual control mechanisms (CLI + Web UI) and automatic port conflict detection.
+
+### Quick Production Deployment
+
+Deploy to your production server in minutes:
+
+```bash
+# 1. Configure production environment
+cp .env.production .env.production
+# Edit .env.production with strong passwords and production settings
+
+# 2. Deploy to remote server
+./scripts/deploy-to-hetzner.sh
+```
+
+The deployment script will:
+- Automatically detect available ClickHouse ports (8123 → 8125 → 8126)
+- Deploy all services with persistent data volumes
+- Configure automatic restart on server reboot
+- Display access URLs for dashboard and API
+
+### Production Features
+
+**Continuous Operation:**
+- No time-based auto-stop (configurable via `ENABLE_TIME_LIMIT=false`)
+- Data size limits still active for safety
+- Automatic restart on server reboot via systemd
+
+**Dual Control Mechanisms:**
+1. **Web Dashboard**: Start/stop collection via UI at `http://<SERVER_IP>:3001`
+2. **CLI Management**: Use `./scripts/manage.sh` for command-line control
+3. **systemd Service**: System-level service management
+
+**Management Commands:**
+```bash
+# Service control
+./scripts/manage.sh start              # Start all services
+./scripts/manage.sh stop               # Stop all services
+./scripts/manage.sh status             # Show service status
+
+# Collection control
+./scripts/manage.sh start-collection   # Start data collection
+./scripts/manage.sh stop-collection    # Stop data collection
+
+# Monitoring
+./scripts/manage.sh health             # Comprehensive health check
+./scripts/manage.sh logs               # View logs
+```
+
+**Automated Operations:**
+- Daily backups at 2 AM (configurable via cron)
+- Health monitoring every 5 minutes
+- Slack alerts (optional, configure `SLACK_WEBHOOK_URL`)
+- Zero-downtime updates via `./scripts/update.sh`
+
+### Production Architecture
+
+**Directory Structure on Remote Server:**
+```
+/opt/blockchain-ingestion/              # Application
+/var/lib/blockchain-data/               # Persistent data
+/var/backups/blockchain-ingestion/      # Daily backups
+```
+
+**Service Components:**
+- ClickHouse on conflict-free port (auto-detected)
+- FastAPI Collector with extended limits
+- Next.js Dashboard with production build
+- systemd service for auto-restart
+
+### Complete Documentation
+
+See detailed production deployment guides:
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide with setup, configuration, monitoring, troubleshooting, and maintenance procedures
+- **[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)** - Step-by-step verification checklist for deployment validation
+
+### Hybrid Architecture (Advanced)
+
+For advanced production deployments requiring complete historical data and unlimited scalability, this project supports a hybrid architecture with:
+
+**Components:**
+- **Bitcoin Core Full Node**: Local access to complete blockchain history (880,000+ blocks)
+- **ClickHouse v26.1 with S3 Tiering**: Hot data on local SSD, cold data on Backblaze B2
+- **Automated Backups**: Daily incremental backups to cloud storage
+- **Dual-Source Collector**: Uses local node primarily, falls back to public API
+
+**Benefits:**
+- Complete historical data from Bitcoin genesis block
+- No API rate limits or third-party dependencies
+- Cost-effective cold storage (~$2/month for Backblaze)
+- High availability with automatic fallback
+- Disaster recovery with 30-day backup retention
+
+**Storage:**
+- Peak: ~850 GB during initial sync
+- Final: ~400 GB (200 GB Bitcoin Core + 200 GB ClickHouse hot data)
+- Archive: Unlimited on Backblaze S3
+
+**Documentation:**
+- **[HYBRID_ARCHITECTURE.md](HYBRID_ARCHITECTURE.md)** - Complete hybrid architecture guide with all 6 deployment phases
+- **[HYBRID_DEPLOYMENT_CHECKLIST.md](HYBRID_DEPLOYMENT_CHECKLIST.md)** - Phase-by-phase deployment tracking
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick command reference for daily operations
+- **[IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md)** - Implementation summary and deployment guide
+
+**Timeline:** 4-6 weeks (mostly automated sync time)
+
+**Scripts Available:**
+- `scripts/install-bitcoin-core.sh` - Install Bitcoin Core full node
+- `scripts/check-bitcoin-sync.sh` - Monitor Bitcoin sync progress
+- `scripts/start-historical-backfill.sh` - Start complete historical data collection
+- `scripts/monitor-backfill.sh` - Track backfill progress
+- `scripts/enable-bitcoin-pruning.sh` - Enable pruning to save space
+- `scripts/upgrade-clickhouse.sh` - Upgrade to v26.1 with S3 support
+- `scripts/setup-rclone.sh` - Configure Backblaze integration
+- `scripts/backup-to-backblaze.sh` - Manual backup to cloud
+- `scripts/check-storage-distribution.sh` - Monitor hot/cold storage
+- `scripts/system-health-check.sh` - Comprehensive system validation
+
+This hybrid architecture is ideal for research projects, academic institutions, or organizations requiring complete blockchain history without ongoing API costs.
+
+### Production vs Development
+
+| Feature | Development | Production |
+|---------|-------------|------------|
+| Time Limit | 10 minutes (auto-stop) | Disabled (continuous) |
+| Data Limit | 5GB | 500GB (configurable) |
+| Restart Policy | Manual | Automatic (systemd) |
+| Data Persistence | Docker volumes | Host volumes (/var/lib) |
+| Backups | Manual | Automated (daily) |
+| Monitoring | Manual checks | Automated (cron) |
+| Port Conflicts | Manual resolution | Auto-detection |
+| Control Methods | Web UI only | Web UI + CLI + systemd |
+
+### Quick Commands Reference
+
+**Deployment:**
+```bash
+./scripts/deploy-to-hetzner.sh         # Initial deployment
+./scripts/update.sh                     # Zero-downtime update
+```
+
+**Monitoring:**
+```bash
+./scripts/health-check.sh               # Full health check
+./scripts/monitor-and-alert.sh          # Check and alert
+```
+
+**Maintenance:**
+```bash
+./scripts/backup-clickhouse.sh          # Create backup
+./scripts/manage.sh backup              # Same as above
+```
+
+**systemd Control:**
+```bash
+sudo systemctl start blockchain-ingestion
+sudo systemctl status blockchain-ingestion
+sudo systemctl stop blockchain-ingestion
+```
+
+For complete deployment instructions, troubleshooting, and operational procedures, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ## Configuration
 
 All configuration is managed through the `.env` file. Key parameters include:

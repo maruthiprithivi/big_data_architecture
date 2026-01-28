@@ -1,0 +1,128 @@
+services:
+  # ClickHouse Database - Production Configuration
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.1.8-alpine
+    container_name: blockchain_clickhouse_prod
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      BACKBLAZE_KEY_ID: ${BACKBLAZE_KEY_ID}
+      BACKBLAZE_APPLICATION_KEY: ${BACKBLAZE_APPLICATION_KEY}
+    ports:
+      - "${CLICKHOUSE_PORT:-8125}:8123"  # Configurable HTTP port with fallback
+      - "9002:9000"  # Native protocol on alternative port to avoid conflicts
+    volumes:
+      - /var/lib/blockchain-data/clickhouse:/var/lib/clickhouse  # Host volume for persistence
+      - ./clickhouse-init:/docker-entrypoint-initdb.d
+      - ./clickhouse-config:/etc/clickhouse-server/config.d  # Custom configuration
+    networks:
+      - blockchain-network
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  bitcoin-core:
+    image: bitcoin/bitcoin:27.0
+    container_name: blockchain_bitcoin_core
+    volumes:
+      - /var/lib/blockchain-data/bitcoin:/home/bitcoin/.bitcoin
+      - ./bitcoin-core/bitcoin.conf:/home/bitcoin/.bitcoin/bitcoin.conf:ro
+    ports:
+      - "8332:8332"  # RPC
+      - "8333:8333"  # P2P
+    networks:
+      - blockchain-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "bitcoin-cli", "-rpcuser=blockchain_collector", "-rpcpassword=${BITCOIN_CORE_RPC_PASSWORD}", "getblockchaininfo"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  collector:
+    build:
+      context: ./collector
+      dockerfile: Dockerfile
+    container_name: blockchain_collector_prod
+    env_file:
+      - .env
+    environment:
+      - ENABLE_TIME_LIMIT=${ENABLE_TIME_LIMIT:-false}
+      - MAX_COLLECTION_TIME_MINUTES=${MAX_COLLECTION_TIME_MINUTES:-525600}
+      - MAX_DATA_SIZE_GB=${MAX_DATA_SIZE_GB:-100}
+      - CLICKHOUSE_PORT=8123  # Override to use internal container port
+      # Transaction Limits
+      - BITCOIN_TX_LIMIT=${BITCOIN_TX_LIMIT:-0}
+      - SOLANA_TX_LIMIT=${SOLANA_TX_LIMIT:-0}
+      # Historical Data Collection
+      - ENABLE_HISTORICAL_BACKFILL=${ENABLE_HISTORICAL_BACKFILL:-false}
+      - BITCOIN_START_BLOCK=${BITCOIN_START_BLOCK:--1}
+      - SOLANA_START_SLOT=${SOLANA_START_SLOT:--1}
+      # Parallel Processing
+      - PARALLEL_BLOCK_FETCH_COUNT=${PARALLEL_BLOCK_FETCH_COUNT:-10}
+      - ENABLE_BATCH_INSERTS=${ENABLE_BATCH_INSERTS:-true}
+    ports:
+      - "8010:8000"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - blockchain-network
+    volumes:
+      - /var/lib/blockchain-data/collector-state:/app/state  # Host volume for state persistence
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: blockchain_dashboard_prod
+    environment:
+      - NODE_ENV=production
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123  # Internal container port
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB}
+      - COLLECTOR_URL=http://collector:8000  # Internal Docker network
+      - MAX_COLLECTION_TIME_MINUTES=${MAX_COLLECTION_TIME_MINUTES:-525600}
+      - MAX_DATA_SIZE_GB=${MAX_DATA_SIZE_GB:-500}
+      - NEXT_PUBLIC_MAX_COLLECTION_TIME_MINUTES=${MAX_COLLECTION_TIME_MINUTES:-525600}
+      - NEXT_PUBLIC_MAX_DATA_SIZE_GB=${MAX_DATA_SIZE_GB:-500}
+    ports:
+      - "3001:3000"
+    depends_on:
+      - clickhouse
+      - collector
+    networks:
+      - blockchain-network
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  blockchain-network:
+    driver: bridge
