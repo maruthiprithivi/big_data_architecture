@@ -1,0 +1,37 @@
+[Unit]
+Description=Blockchain Data Ingestion Service
+Documentation=https://github.com/maruthiprithivi/big_data_architecture
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/blockchain-ingestion
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+
+# Start services
+ExecStart=/usr/bin/docker compose -f docker-compose.production.yml up -d
+
+# Stop services
+ExecStop=/usr/bin/docker compose -f docker-compose.production.yml down
+
+# Reload/restart services
+ExecReload=/usr/bin/docker compose -f docker-compose.production.yml restart
+
+# Restart policy
+Restart=on-failure
+RestartSec=10s
+
+# Security settings
+User=root
+Group=root
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=blockchain-ingestion
+
+[Install]
+WantedBy=multi-user.target
