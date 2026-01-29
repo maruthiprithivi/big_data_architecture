@@ -33,9 +33,10 @@ services:
   bitcoin-core:
     image: bitcoin/bitcoin:27.0
     container_name: blockchain_bitcoin_core
+    env_file:
+      - .env.production
     volumes:
       - /var/lib/blockchain-data/bitcoin:/home/bitcoin/.bitcoin
-      - ./bitcoin-core/bitcoin.conf:/home/bitcoin/.bitcoin/bitcoin.conf:ro
     ports:
       - "8332:8332"  # RPC
       - "8333:8333"  # P2P
@@ -43,7 +44,7 @@ services:
       - blockchain-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "bitcoin-cli", "-rpcuser=blockchain_collector", "-rpcpassword=${BITCOIN_CORE_RPC_PASSWORD}", "getblockchaininfo"]
+      test: ["CMD-SHELL", "bitcoin-cli -rpcuser=blockchain_collector -rpcpassword=$${BITCOIN_CORE_RPC_PASSWORD} getblockchaininfo > /dev/null 2>&1"]
       interval: 30s
       timeout: 10s
       retries: 3
