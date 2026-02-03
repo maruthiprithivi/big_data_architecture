@@ -308,6 +308,31 @@ Both collectors save their current position to a ClickHouse table (`collector_po
 3. If no saved position exists, the collector falls back to environment variable configuration (backfill settings or chain tip).
 4. After each successful block/batch, the position is updated in ClickHouse.
 
+### Bitcoin vs Solana resume behavior
+
+**Bitcoin:** Full resume with no data loss. Bitcoin's complete history is available via the Blockstream API (or a local Bitcoin Core node). If the collector is offline for days or weeks, it will catch up from exactly where it left off. No blocks are missed.
+
+**Solana:** Resume is best-effort with potential data gaps. Public Solana RPC nodes retain only ~2 days of slot history. If the collector is offline for longer than this retention window:
+
+1. The saved position will reference slots that no longer exist on the RPC node.
+2. The collector will repeatedly try to fetch those unavailable slots.
+3. **You must manually reset the Solana position** to resume collection from the current slot.
+4. **Data for the gap period is permanently lost** (cannot be recovered from public RPC nodes).
+
+**Resetting Solana position after extended downtime:**
+
+```bash
+docker compose exec clickhouse clickhouse-client --query \
+  "ALTER TABLE blockchain_data.collector_positions DELETE WHERE collector = 'solana'"
+```
+
+After resetting, the collector will start from the current slot on its next cycle.
+
+To minimize Solana data gaps:
+- Keep the collector running continuously.
+- Use a dedicated Solana RPC provider with longer retention if historical completeness is required.
+- Monitor the `collector_positions` table to detect large gaps between `last_position` and current slot.
+
 ### Inspect saved positions
 
 ```bash
