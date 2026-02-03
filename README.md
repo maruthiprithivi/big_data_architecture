@@ -1067,7 +1067,20 @@ Look for `[VOLUME]`, `[VELOCITY]`, `[VARIETY]`, `[VERACITY]`, and `[VALUE]` comm
 - **Data Completeness**: The system collects a subset of available blockchain data for educational purposes
 - **Bitcoin Transactions**: Limited to 25 transactions per block due to API constraints
 - **Solana Transactions**: Limited to 50 transactions per block for performance
+- **Solana No Backfill**: Solana collection starts from the current slot forward only. Public Solana RPC nodes typically retain only the last ~2 days of data, so historical backfill is not supported.
 - **Not Production-Ready**: This is an educational tool; production systems require additional error handling, monitoring, and security measures
+
+### Bitcoin Backfill Options
+
+Bitcoin supports optional historical backfill via environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENABLE_HISTORICAL_BACKFILL` | `false` | Set to `true` to start collection from a specific block instead of chain tip |
+| `BITCOIN_START_BLOCK` | `-1` | Block height to start from when backfill is enabled (e.g., `0` for genesis) |
+| `PARALLEL_BLOCK_FETCH_COUNT` | `1` | Number of blocks to fetch concurrently during backfill (increase for faster catch-up) |
+
+When the collector restarts, it automatically resumes from its last saved position in ClickHouse (the `collector_positions` table). If no saved position exists, it falls back to backfill settings or starts from the chain tip.
 
 ## Future Development
 

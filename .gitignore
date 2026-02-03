@@ -1,10 +1,17 @@
 # Environment variables
 .env
+.env.*
 .env.local
 .env.production
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Credentials and secrets
+*.pem
+*.key
+credentials*
+secrets*
 
 # Data directory
 data/

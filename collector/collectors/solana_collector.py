@@ -68,6 +68,10 @@ class SolanaCollector:
     """
     Collects block and transaction data from the Solana blockchain.
 
+    NOTE: Solana collection does not support historical backfill.
+    It collects from the current slot forward only. Solana RPC nodes
+    typically only retain recent data (last ~2 days on public endpoints).
+
     Solana uses a unique leader-based consensus where validators take turns
     producing blocks based on a predetermined schedule derived from stake.
     """
@@ -95,6 +99,29 @@ class SolanaCollector:
         # [VERACITY] Initialize data validator for quality checks
         # Solana's high velocity makes quality checks especially important
         self.validator = DataValidator()
+
+    async def _save_position(self, client, slot):
+        """Save current collection position to ClickHouse for resume on restart."""
+        try:
+            client.command(
+                f"INSERT INTO collector_positions (collector, last_position) "
+                f"VALUES ('solana', {slot})"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to save Solana position: {e}")
+
+    async def _load_position(self, client):
+        """Load last collection position from ClickHouse."""
+        try:
+            result = client.query(
+                "SELECT last_position FROM collector_positions FINAL "
+                "WHERE collector = 'solana'"
+            )
+            if result.result_rows:
+                return int(result.result_rows[0][0])
+        except Exception as e:
+            logger.warning(f"Failed to load Solana position: {e}")
+        return None
 
     async def rpc_call(self, session, method: str, params: list):
         """
@@ -170,9 +197,14 @@ class SolanaCollector:
                 # Get the current slot number (like block height, but includes skipped)
                 latest_slot = await self.rpc_call(session, "getSlot", [])
 
-                # If first run, start from latest slot
+                # If first run, try to resume from saved position
                 if self.last_slot is None:
-                    self.last_slot = latest_slot - 1
+                    saved = await self._load_position(client)
+                    if saved is not None:
+                        self.last_slot = saved
+                        logger.info(f"Resuming Solana collection from saved position {saved}")
+                    else:
+                        self.last_slot = latest_slot - 1
 
                 # Only collect if there's a new slot
                 if self.last_slot < latest_slot:
@@ -344,6 +376,7 @@ class SolanaCollector:
                             records_collected += len(tx_data)
 
                         self.last_slot = slot
+                        await self._save_position(client, self.last_slot)
                         logger.info(f"Collected Solana slot {slot} with {len(tx_data)} transactions")
                     else:
                         # Block not available - slot might be skipped or not yet confirmed

@@ -133,14 +133,13 @@ class BitcoinCollector:
 
         try:
             auth = aiohttp.BasicAuth(self.rpc_user, self.rpc_password)
-            timeout = aiohttp.ClientTimeout(total=30)
+            timeout = aiohttp.ClientTimeout(total=120)
             async with session.post(
                 self.local_node_url,
                 json=payload,
                 auth=auth,
                 timeout=timeout
             ) as resp:
-                resp.raise_for_status()
                 result = await resp.json()
 
                 if 'error' in result and result['error']:
@@ -163,18 +162,22 @@ class BitcoinCollector:
         Returns:
             Block data dict or None on failure
         """
-        try:
-            # Get block hash for this height
-            block_hash = await self._call_rpc(session, 'getblockhash', [block_height])
+        for attempt in range(3):
+            try:
+                # Get block hash for this height
+                block_hash = await self._call_rpc(session, 'getblockhash', [block_height])
 
-            # Get block with verbosity=2 (includes full transaction details)
-            block = await self._call_rpc(session, 'getblock', [block_hash, 2])
+                # Get block with verbosity=2 (includes full transaction details)
+                block = await self._call_rpc(session, 'getblock', [block_hash, 2])
 
-            return block
+                return block
 
-        except Exception as e:
-            logger.warning(f"Local node failed for block {block_height}: {e}")
-            return None
+            except Exception as e:
+                if attempt < 2:
+                    await asyncio.sleep(2 ** attempt)
+                    continue
+                logger.warning(f"Local node failed for block {block_height} after 3 attempts: {e}")
+                return None
 
     async def _fetch_block_from_public_api(self, session, block_height: int):
         """
@@ -332,12 +335,14 @@ class BitcoinCollector:
             if block is None:
                 return 0
 
-            # Extract transaction IDs based on source
+            # Extract transaction data based on source
+            local_tx_map = {}
             if 'tx' in block and isinstance(block['tx'], list):
                 # From local node (full tx objects) or public API (tx IDs)
                 if len(block['tx']) > 0 and isinstance(block['tx'][0], dict):
-                    # Local node format: full transaction objects
+                    # Local node format: full transaction objects already available
                     all_tx_ids = [tx['txid'] for tx in block['tx']]
+                    local_tx_map = {tx['txid']: tx for tx in block['tx']}
                 else:
                     # Public API format: transaction IDs
                     all_tx_ids = block['tx']
@@ -388,19 +393,22 @@ class BitcoinCollector:
             tx_data = []
             for tx_id in tx_ids:
                 try:
-                    # Fetch transaction (try local node first if enabled)
-                    tx = None
-                    if self.use_local_node:
-                        try:
-                            tx = await self._call_rpc(session, 'getrawtransaction', [tx_id, True])
-                        except Exception as e:
-                            logger.debug(f"Local RPC failed for tx {tx_id}, using public API: {e}")
+                    # Use cached tx data from block response if available (local node verbosity=2)
+                    tx = local_tx_map.get(tx_id)
 
-                    # Fallback to public API
+                    # Only fetch individually if not in cache (public API blocks don't include tx details)
                     if tx is None:
-                        tx = await self._api_call_with_retry(
-                            session, f"{self.public_api_url}/tx/{tx_id}", return_type='json'
-                        )
+                        if self.use_local_node:
+                            try:
+                                tx = await self._call_rpc(session, 'getrawtransaction', [tx_id, True])
+                            except Exception as e:
+                                logger.debug(f"Local RPC failed for tx {tx_id}: {e}")
+
+                        # Fallback to public API only if local node unavailable
+                        if tx is None:
+                            tx = await self._api_call_with_retry(
+                                session, f"{self.public_api_url}/tx/{tx_id}", return_type='json'
+                            )
 
                     if tx is None:
                         continue
@@ -444,6 +452,29 @@ class BitcoinCollector:
             logger.error(f"Error collecting Bitcoin block {block_height}: {e}")
             return 0
 
+    async def _save_position(self, client, height):
+        """Save current collection position to ClickHouse for resume on restart."""
+        try:
+            client.command(
+                f"INSERT INTO collector_positions (collector, last_position) "
+                f"VALUES ('bitcoin', {height})"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to save Bitcoin position: {e}")
+
+    async def _load_position(self, client):
+        """Load last collection position from ClickHouse."""
+        try:
+            result = client.query(
+                "SELECT last_position FROM collector_positions FINAL "
+                "WHERE collector = 'bitcoin'"
+            )
+            if result.result_rows:
+                return int(result.result_rows[0][0])
+        except Exception as e:
+            logger.warning(f"Failed to load Bitcoin position: {e}")
+        return None
+
     async def collect(self, client):
         """
         Collect the next Bitcoin block and its transactions.
@@ -471,24 +502,40 @@ class BitcoinCollector:
             # one API response.
             async with aiohttp.ClientSession() as session:
                 # Get the current blockchain height (number of blocks)
-                latest_height_str = await self._api_call_with_retry(
-                    session, f"{self.rpc_url}/blocks/tip/height", return_type='text'
-                )
-                if latest_height_str is None:
-                    return  # API temporarily unavailable
-                latest_height = int(latest_height_str)
+                latest_height = None
+                if self.use_local_node:
+                    try:
+                        result = await self._call_rpc(session, 'getblockcount')
+                        if result is not None:
+                            latest_height = int(result)
+                    except Exception as e:
+                        logger.warning(f"Failed to get block count from local node: {e}")
 
-                # If first run, determine starting block based on configuration
+                if latest_height is None:
+                    latest_height_str = await self._api_call_with_retry(
+                        session, f"{self.rpc_url}/blocks/tip/height", return_type='text'
+                    )
+                    if latest_height_str is None:
+                        return  # API temporarily unavailable
+                    latest_height = int(latest_height_str)
+
+                # If first run, try to resume from saved position, then fall back
+                # to env var configuration
                 if self.last_block_height is None:
-                    enable_backfill = os.getenv('ENABLE_HISTORICAL_BACKFILL', 'false').lower() == 'true'
-                    start_block = int(os.getenv('BITCOIN_START_BLOCK', '-1'))
-
-                    if enable_backfill and start_block >= 0:
-                        self.last_block_height = start_block
-                        logger.info(f"Starting Bitcoin collection from block {start_block} (historical backfill)")
+                    saved = await self._load_position(client)
+                    if saved is not None:
+                        self.last_block_height = saved
+                        logger.info(f"Resuming Bitcoin collection from saved position {saved}")
                     else:
-                        self.last_block_height = latest_height - 1
-                        logger.info(f"Starting Bitcoin collection from latest block {latest_height}")
+                        enable_backfill = os.getenv('ENABLE_HISTORICAL_BACKFILL', 'false').lower() == 'true'
+                        start_block = int(os.getenv('BITCOIN_START_BLOCK', '-1'))
+
+                        if enable_backfill and start_block >= 0:
+                            self.last_block_height = start_block
+                            logger.info(f"Starting Bitcoin collection from block {start_block} (historical backfill)")
+                        else:
+                            self.last_block_height = latest_height - 1
+                            logger.info(f"Starting Bitcoin collection from latest block {latest_height}")
 
                 # Only collect if there's a new block
                 if self.last_block_height < latest_height:
@@ -513,20 +560,31 @@ class BitcoinCollector:
                         ]
                         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                        # Count successful collections and update last_block_height
-                        successful_blocks = 0
+                        # Find the highest contiguous successful block from batch start
+                        # to avoid skipping failed blocks in the middle of the batch
+                        batch_start = self.last_block_height + 1
+                        successful_heights = set()
                         for i, result in enumerate(results):
+                            block_h = batch_start + i
                             if isinstance(result, Exception):
-                                logger.error(f"Error collecting block {self.last_block_height + i + 1}: {result}")
+                                logger.error(f"Error collecting block {block_h}: {result}")
                             elif result > 0:
-                                successful_blocks += 1
+                                successful_heights.add(block_h)
                                 records_collected += result
-                                # Update to the highest successfully fetched block
-                                self.last_block_height = self.last_block_height + i + 1
 
-                        if successful_blocks > 0:
+                        # Only advance position to the end of the contiguous run
+                        contiguous_end = self.last_block_height
+                        for h in range(batch_start, batch_start + fetch_count):
+                            if h in successful_heights:
+                                contiguous_end = h
+                            else:
+                                break
+                        self.last_block_height = contiguous_end
+
+                        if successful_heights:
                             self.last_successful_collect = datetime.now()
                             self.retry_delay = max(1, self.retry_delay // 2)
+                            await self._save_position(client, self.last_block_height)
 
                         return  # Exit early after parallel collection
 
@@ -723,6 +781,7 @@ class BitcoinCollector:
                     self.last_successful_collect = datetime.now()
                     # Reduce retry delay on successful collection
                     self.retry_delay = max(1, self.retry_delay // 2)
+                    await self._save_position(client, self.last_block_height)
                     logger.info(f"Collected Bitcoin block {block_height} with {len(tx_data)} transactions")
 
         except Exception as e:
