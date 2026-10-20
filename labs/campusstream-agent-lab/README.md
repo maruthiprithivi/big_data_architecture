@@ -1,12 +1,12 @@
 # CampusStream: make the AI show its evidence
 
-A twenty-minute Big Data Architecture lab: ask a small local model to plan an investigation, execute a bounded ClickHouse tool, and build a downloadable HTML dashboard. One million synthetic viewing sessions; one homepage decision. No external AI API, API key, GPU or host Python/Node install.
+A twenty-minute Big Data Architecture lab: predict a title, change the success measure and watching threshold, then reveal a live chart built by a small local model and ClickHouse. One million synthetic viewing sessions; one homepage decision. No external AI API, API key, GPU or host Python/Node install.
 
 ## Start on Windows or macOS
 
 Student repository: **https://github.com/maruthiprithivi/big_data_architecture/tree/main/labs/campusstream-agent-lab**
 
-Download **[the lab-only ZIP](https://github.com/maruthiprithivi/big_data_architecture/releases/download/campusstream-lab-v1.0.1/campusstream-agent-lab.zip)**, then **extract** it. No Git installation is required. Open the extracted `campusstream-agent-lab` folder containing `compose.yaml` in Terminal (macOS) or PowerShell (Windows).
+Download **[the lab-only ZIP](https://github.com/maruthiprithivi/big_data_architecture/releases/download/campusstream-lab-v1.1.0/campusstream-agent-lab.zip)**, then **extract** it. No Git installation is required. Open the extracted `campusstream-agent-lab` folder containing `compose.yaml` in Terminal (macOS) or PowerShell (Windows).
 
 If you already cloned the course repository, open `labs/campusstream-agent-lab` instead. The lab's own Compose file and scripts run independently of the blockchain lab at the repository root. Run the commands below from the lab folder.
 
@@ -26,12 +26,14 @@ Container limits: model 2,300 MiB, ClickHouse 1,000 MiB, app 256 MiB, one-shot d
 
 ## The challenge
 
-1. **Predict — 3 min.** Choose the most-started movie before asking.
-2. **Explore — 6 min.** Compare starts, engaged-session count and engagement rate. Inspect the plan, SQL and query rows. Swap the driver.
-3. **Build — 6 min.** Change a grouping or threshold, then download and open the dashboard HTML.
+1. **Predict — 3 min.** Click your predicted winning movie tile before revealing any data.
+2. **Explore — 6 min.** Select Starts, Engaged sessions, then Engagement rate. Click **Reveal the evidence** each time. Watch the ranking and prediction feedback change; swap the driver.
+3. **Build — 6 min.** Move the threshold slider from 20 to 30 to 40 minutes and predict each result. Change the grouping. Use **Save dashboard** to keep your HTML artifact.
 4. **Defend — 5 min.** Give a 30-second recommendation, business aim, limitation and next experiment.
 
-Try:
+The chart, experiment controls and actual architecture stages stay together on the main screen. A stage changes when the server reaches that tool boundary; fast stages may complete immediately. Exact rows, SQL, the model’s proposed interpretation and a free-form question are available in expandable sections. Existing charts remain the previous run until you click Reveal again.
+
+Try these in **Ask your own analytics question**:
 
 ```text
 Compare starts by title and build a dashboard.

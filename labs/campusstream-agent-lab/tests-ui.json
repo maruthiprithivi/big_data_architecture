@@ -1,0 +1,64 @@
+{
+  "url": "http://127.0.0.1:8096",
+  "cases": [
+    {
+      "error": null,
+      "decision": "The Matrix leads on starts.\n\nYour prediction matched \u2014 would another measure change your choice?",
+      "rows": "The Matrix500,000100,00020Apollo 13300,000240,00080Cloud Atlas100,00090,00090Sleepless in Seattle100,00060,00060",
+      "done": 4,
+      "scroll": 0
+    },
+    {
+      "error": null,
+      "decision": "Apollo 13 leads on engaged sessions.\n\nYou predicted The Matrix. Reconsider \u2014 would another measure change your choice?",
+      "rows": "Apollo 13300,000240,00080The Matrix500,000100,00020Cloud Atlas100,00090,00090Sleepless in Seattle100,00060,00060",
+      "done": 4,
+      "scroll": 0
+    },
+    {
+      "error": null,
+      "decision": "Cloud Atlas leads on engagement rate.\n\nYou predicted The Matrix. Reconsider \u2014 would another measure change your choice?",
+      "rows": "Cloud Atlas100,00090,00090Apollo 13300,000240,00080Sleepless in Seattle100,00060,00060The Matrix500,000100,00020",
+      "done": 4,
+      "scroll": 0
+    },
+    {
+      "error": null,
+      "decision": "Cloud Atlas leads on engagement rate.\n\nYou predicted The Matrix. Reconsider \u2014 would another measure change your choice?",
+      "rows": "Cloud Atlas100,00090,00090Apollo 13300,000240,00080Sleepless in Seattle100,00060,00060The Matrix500,000100,00020",
+      "done": 4,
+      "scroll": 0
+    },
+    {
+      "error": null,
+      "decision": "A tie: 4 segments share the lead.\n\nNo session cleared this threshold. Zero engagement does not identify a winning title.",
+      "rows": "Apollo 13300,00000Cloud Atlas100,00000Sleepless in Seattle100,00000The Matrix500,00000",
+      "done": 4,
+      "scroll": 0
+    }
+  ],
+  "responsive": [
+    {
+      "width": 500,
+      "content": 500,
+      "runVisible": true
+    },
+    {
+      "width": 768,
+      "content": 768,
+      "runVisible": true
+    },
+    {
+      "width": 1024,
+      "content": 1024,
+      "runVisible": true
+    },
+    {
+      "width": 1440,
+      "content": 1440,
+      "runVisible": true
+    }
+  ],
+  "download": "actual browser Blob contains SQL + model attribution",
+  "console": "console:\n## Console messages\n<no console messages found>\nhelp[2]:\n  Run `chrome-devtools-axi console-get <id>` to see a specific message\n  Run `chrome-devtools-axi console --type error` to filter by type\n"
+}
