@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="470" viewBox="0 0 1280 470" role="img" aria-labelledby="title desc">
+<style>text{font-family:"DM Sans",Arial,sans-serif;fill:#1e3028} .name{font-size:27px;font-weight:700}.body{font-size:23px}.small{font-size:20px;fill:#506057}.label{font-size:21px;font-weight:700}.panel{fill:#e5e8dc}.accent{fill:#dfe754}.line{fill:none;stroke:#506057;stroke-width:2}.icon{fill:none;stroke:#1e3028;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}</style>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M1 1 7 4 1 7" fill="none" stroke="#506057" stroke-width="1.4"/></marker></defs>
+<rect width="1280" height="470" fill="#f5f1e7"/>
+<title id="title">CampusStream: from viewer activity to a measured homepage decision</title>
+<desc id="desc">Conceptual production design. Web and mobile viewer events flow through a durable buffer and preparation into ClickHouse. A dashboard compares titles. People choose a homepage test, observe return visits and quick exits, then feed that evidence into the next viewing experience. These ingestion components are not implemented in the local lab.</desc>
+<g>
+ <rect class="panel" x="10" y="25" width="218" height="199"/>
+ <g class="icon" transform="translate(30 43)"><rect width="38" height="27" rx="2"/><path d="M0 7h38M13 34h12m-6-7v7m24-19h10v22H43Z"/></g>
+ <text class="name" x="30" y="117">Web + mobile</text><text class="body" x="30" y="153">Browse · play</text><text class="body" x="30" y="185">Watch events</text>
+ <rect class="panel" x="269" y="25" width="218" height="199"/>
+ <g class="icon" transform="translate(290 42)"><rect width="40" height="9"/><rect y="16" width="40" height="9"/><rect y="32" width="40" height="9"/></g>
+ <text class="name" x="289" y="117">Durable buffer</text><text class="body" x="289" y="153">Absorb bursts</text><text class="body" x="289" y="185">Retain for replay</text>
+ <rect class="panel" x="528" y="25" width="218" height="199"/>
+ <g class="icon" transform="translate(549 42)"><path d="M0 0h40L25 20v16l-10 5V20Z"/><path d="m13 7 5 5 11-12"/></g>
+ <text class="name" x="548" y="117">Prepare</text><text class="body" x="548" y="153">IDs · time · units</text><text class="body" x="548" y="185">Define sessions</text>
+ <rect class="accent" x="787" y="25" width="218" height="199"/>
+ <g class="icon" transform="translate(808 42)"><ellipse cx="20" cy="7" rx="20" ry="7"/><path d="M0 7v29c0 10 40 10 40 0V7M0 21c0 10 40 10 40 0"/></g>
+ <text class="name" x="807" y="117">ClickHouse</text><text class="body" x="807" y="153">Store sessions</text><text class="body" x="807" y="185">Aggregate in SQL</text>
+ <rect class="panel" x="1046" y="25" width="224" height="199"/>
+ <g class="icon" transform="translate(1067 42)"><path d="M0 0v42h43M9 34V21h7v13m8 0V12h7v22m8 0V3h7v31"/></g>
+ <text class="name" x="1066" y="117">Dashboard</text><text class="body" x="1066" y="153">Compare titles</text><text class="body" x="1066" y="185">Counts + rates</text>
+</g>
+<g class="line" marker-end="url(#arrow)"><path d="M233 125h30"/><path d="M492 125h30"/><path d="M751 125h30"/><path d="M1010 125h30"/><path d="M1158 229v48h-64v30"/><path d="M922 355H850"/><path d="M554 355H483"/><path d="M165 307v-52H119v-26"/></g>
+<rect x="10" y="307" width="467" height="103" fill="none" stroke="#acb4a3"/>
+<text class="name" x="30" y="345">Keep or change the feature</text><text class="body" x="30" y="382">Feed the result into the next test</text>
+<rect x="560" y="307" width="284" height="103" fill="none" stroke="#acb4a3"/>
+<text class="name" x="580" y="345">Observe outcomes</text><text class="body" x="580" y="382">Returns · quick exits</text>
+<rect class="accent" x="928" y="307" width="342" height="103"/>
+<text class="name" x="948" y="345">Run a homepage test</text><text class="body" x="948" y="382">Does the choice help viewers?</text>
+<text class="small" x="10" y="455">Conceptual production design · the local lab begins with prepared synthetic session rows.</text>
+</svg>

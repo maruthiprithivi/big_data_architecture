@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="470" viewBox="0 0 1280 470" role="img" aria-labelledby="title desc">
+<style>text{font-family:"DM Sans",Arial,sans-serif;fill:#1e3028} .name{font-size:27px;font-weight:700}.body{font-size:23px}.small{font-size:20px;fill:#506057}.label{font-size:21px;font-weight:700}.panel{fill:#e5e8dc}.accent{fill:#dfe754}.line{fill:none;stroke:#506057;stroke-width:2}.icon{fill:none;stroke:#1e3028;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}</style>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M1 1 7 4 1 7" fill="none" stroke="#506057" stroke-width="1.4"/></marker></defs>
+<rect width="1280" height="470" fill="#f5f1e7"/>
+<title id="title">CampusStream local lab: deployment and the evidence path</title>
+<desc id="desc">On a student laptop, a browser connects only to the Python app on localhost port 8090. Inside Docker Compose, the app requests a bounded JSON plan and an evidence reflection from a CPU Qwen model, validates choices, executes a read-only SELECT against ClickHouse and builds a chart from exact returned rows. The model cannot access the database directly. At setup a one-shot downloader fills a named model cache and ClickHouse init.sql generates one million synthetic sessions.</desc>
+<rect x="275" y="8" width="995" height="352" rx="4" fill="none" stroke="#acb4a3" stroke-width="2"/>
+<text class="label" x="297" y="39">Docker Compose · on your laptop</text>
+<text class="small" x="864" y="39">Model + database ports stay private</text>
+<rect class="panel" x="10" y="106" width="205" height="220"/>
+<g class="icon" transform="translate(30 125)"><rect width="40" height="29" rx="2"/><path d="M0 7h40M13 36h14m-7-7v7"/></g>
+<text class="name" x="30" y="195">Your browser</text><text class="body" x="30" y="230">Ask · inspect</text><text class="body" x="30" y="262">Save dashboard</text><text x="30" y="303" font-size="19">localhost:8090</text>
+<path class="line" d="M222 219h71" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text class="small" x="230" y="202">HTTP</text>
+<rect class="panel" x="300" y="75" width="330" height="251"/>
+<text class="name" x="322" y="113">Python app</text><text class="small" x="322" y="143">app:8090 · orchestrator + UI</text>
+<path d="M322 162h286" stroke="#acb4a3"/>
+<text class="body" x="322" y="196">Validate model choices</text><text class="body" x="322" y="231">Build read-only SQL</text><text class="body" x="322" y="266">Check exact rows</text><text class="body" x="322" y="301">Render chart + HTML</text>
+<rect class="panel" x="890" y="67" width="355" height="115"/>
+<text class="name" x="910" y="104">Local Qwen 1.5B</text><text class="body" x="910" y="137">CPU · Q4_K_M weights</text><text class="small" x="910" y="166">llama.cpp · model:8080</text>
+<path class="line" d="M639 151h241" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text class="label" x="648" y="103">1 Plan · 3 Reflect</text><text x="648" y="132" font-size="19">JSON request / response</text>
+<rect class="accent" x="890" y="226" width="355" height="115"/>
+<text class="name" x="910" y="261">ClickHouse</text><text class="body" x="910" y="293">1M synthetic sessions</text><text class="small" x="910" y="325">clickhouse:8123 · lab_reader</text>
+<path class="line" d="M639 281h241" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text class="label" x="648" y="247">2 Read-only SELECT</text><text class="small" x="648" y="311">Exact rows return</text>
+<text class="small" x="646" y="208">All tools go through the app</text>
+<path d="M10 386h1260" stroke="#acb4a3"/>
+<text class="label" x="10" y="417">Setup only</text>
+<text class="small" x="155" y="417">model-download → model-cache volume → model (read-only mount)</text>
+<text class="small" x="155" y="451">ClickHouse init.sql → generate 1,000,000 prepared sessions · no live ingestion pipeline</text>
+</svg>
