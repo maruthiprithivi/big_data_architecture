@@ -1,5 +1,13 @@
 # Verification record — 20 October 2026
 
+## Interactive experiment UI — v1.1.0
+
+The lab now uses prediction tiles, metric radios, a watch-threshold slider, a grouping selector and a persistent chart. Architecture nodes report actual server execution boundaries through streamed NDJSON; the existing JSON API remains available. No new runtime dependencies or changes to model weights/container caps.
+
+On Mac Studio ARM64, the browser E2E used the actual model and database: prediction, Starts → The Matrix, Engaged sessions → Apollo 13, Rate → Cloud Atlas, 40-minute zero tie, SQL disclosure, downloaded HTML contents, keyboard focus, no console errors, and no horizontal overflow at 320/768/1024/1440px. Main controls, chart and flow fit in 1440×970 without scrolling. Evidence: `tests-ui.json`. Portable postflight separately checks streamed stage order and all previous validation/security checks: `tests-studio-visual.json`. Older platform receipts below predate this UI change; native Windows and Intel host coverage remains unavailable.
+
+Maintainer checks (not student prerequisites): `python3 -m unittest discover -s tests -p 'test_progress.py'`; with the real stack ready, `python3 tests/test_browser.py` uses `rtk` and `chrome-devtools-axi` from PATH. Set `LAB_URL` to an alternate loopback address and `LAB_UI_OUTPUT` for screenshots/receipt output.
+
 ## Cold-start fix — v1.0.1
 
 A fresh Mac Studio download exposed exit 137 / OOMKilled at the 160 MiB downloader limit after approximately 328 MiB of weights had been written. The downloader now flushes each 1 MiB block to disk and releases its file-cache pages. A fresh download then completed with exit 0 / OOMKilled false under the same 167,772,160-byte cap, retained SHA-256 verification, and passed all four real-model investigations and seven postflight checks. Evidence: `tests-studio-cold.json`. The Studio Docker VM had approximately 16 GiB allocated; this does not establish operation in a 4 GiB VM. The original ARM64/AMD64 receipts below predate this patch.
@@ -29,7 +37,7 @@ Cold native startup downloaded the model from its official pinned revision and v
 - Invalid plans/thresholds/prompts are rejected; model text cannot be interpolated as SQL or executed as code.
 - The database reader independently rejects DROP TABLE with ACCESS_DENIED.
 - Cross-origin write requests are rejected.
-- Browser checks cover starter prompt selection, disabled/loading state, evidence rendering, SQL/trace disclosure, HTML download contents, and responsive overflow. QR codes are decoded back to the LinkedIn and actual student-repository URLs.
+- Current browser checks cover prediction selection, three metric choices, the threshold slider, evidence rendering, SQL disclosure, HTML download contents, keyboard focus and responsive overflow. QR codes are decoded back to the LinkedIn and actual student-repository URLs.
 
 ## Reproduce on the classroom hosts
 
@@ -41,7 +49,7 @@ Download/extract the lab-only release ZIP and open `campusstream-agent-lab`, or 
 | Set up and wait until ready | `bash lab.sh setup` | `powershell -NoProfile -ExecutionPolicy Bypass -File .\lab.ps1 setup` |
 | Verify the whole lab | `bash lab.sh postflight` | `powershell -NoProfile -ExecutionPolicy Bypass -File .\lab.ps1 postflight` |
 
-Setup includes preflight. Postflight saves `results/postflight.json` and `results/dashboard.html` after all real checks pass. Open http://localhost:8090, ask a starter prompt, inspect the trace and download your own dashboard too. Record the classroom host OS/CPU, Docker version/allocation and latency with its receipt. Stop with `docker compose down`; the model cache is retained.
+Setup includes preflight. Postflight saves `results/postflight.json` and `results/dashboard.html` after all real checks pass. Open http://localhost:8090, make a prediction, change the metric and threshold, inspect the SQL and save your dashboard too. Record the classroom host OS/CPU, Docker version/allocation and latency with its receipt. Stop with `docker compose down`; the model cache is retained.
 
 Launcher checks: `python3 tests/test_launchers.py` tests Bash, and also PowerShell if `PWSH` points to a runtime. These developer-only checks simulate engine-down, Windows-container mode, too little Docker memory (accepts 3.75 GiB reported after a 4 GiB allocation reserves some for Linux), failed startup and failed E2E. They assert nonzero exits, no continuation after failure, read-only preflight, correct readiness invocation, receipt copying and execution from a path containing spaces. They do not replace actual model/database tests. No Python is required on student hosts.
 

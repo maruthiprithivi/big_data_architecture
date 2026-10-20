@@ -70,8 +70,16 @@ if __name__ == "__main__":
         ("Which title has the highest engagement rate? Use a 20-minute threshold and build a decision dashboard.", "engagement_pct", "title", 1200, "Cloud Atlas", 90),
         ("Compare engagement rate by device, using a 40-minute threshold. Build a dashboard.", "engagement_pct", "device", 2400, "mobile", 0),
     ]
-    for prompt, metric, group, threshold, winner, value in cases:
-        result = call("/api/run", {"prompt": prompt})
+    for index, (prompt, metric, group, threshold, winner, value) in enumerate(cases):
+        if index == 3:
+            request = urllib.request.Request(BASE + "/api/run", data=json.dumps({"prompt": prompt}).encode(), headers={"Content-Type": "application/json", "Accept": "application/x-ndjson"})
+            with urllib.request.urlopen(request, timeout=320) as response:
+                assert response.headers["Content-Type"] == "application/x-ndjson"
+                events = [json.loads(line) for line in response if line.strip()]
+            assert [event["stage"] for event in events if "stage" in event] == ["plan", "query", "interpret", "build"], events
+            result = events[-1]["result"]
+        else:
+            result = call("/api/run", {"prompt": prompt})
         plan = result["plan"]
         assert (plan["metric"], plan["group_by"], plan["threshold_seconds"]) == (metric, group, threshold), plan
         assert result["rows"][0]["segment"] == winner, result["rows"]
@@ -98,7 +106,7 @@ if __name__ == "__main__":
         assert error.code == 403
     else:
         raise AssertionError("Cross-origin request accepted")
-    receipt["checks"] = ["plan validation", "prompt validation", "read-only database", "cross-origin denial", "escaped HTML", "actual local inference", "actual ClickHouse"]
+    receipt["checks"] = ["plan validation", "prompt validation", "read-only database", "cross-origin denial", "escaped HTML", "actual local inference", "actual ClickHouse", "streamed server stages"]
     Path("/tmp/campusstream-e2e.json").write_text(json.dumps(receipt, indent=2))
     Path("/tmp/campusstream-dashboard.html").write_text(result["dashboard_html"])
     print("PASS validation, database write denial, cross-origin denial, escaped artifact, real model plans, real ClickHouse, dashboard export. Receipt: /tmp/campusstream-e2e.json", flush=True)
