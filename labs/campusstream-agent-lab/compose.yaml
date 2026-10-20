@@ -1,0 +1,51 @@
+name: campusstream
+services:
+  model-download:
+    build: .
+    command: [python, download_model.py]
+    volumes:
+      - model-cache:/models
+    mem_limit: 160m
+  model:
+    image: ghcr.io/ggml-org/llama.cpp:server@sha256:143926008cbbbab8fae8fd87809875af3e42d3d676c30c11c55c0f3f683a5a07
+    command: ["-m", /models/qwen.gguf, "--host", 0.0.0.0, "--port", "8080", "--ctx-size", "4096", "--threads", "4", "--parallel", "1", "--batch-size", "256", "--ubatch-size", "128", "--no-warmup"]
+    depends_on:
+      model-download:
+        condition: service_completed_successfully
+    volumes:
+      - model-cache:/models:ro
+    mem_limit: 2300m
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.10-alpine@sha256:50e6fdaef0b2387b7312e07197672f5ccaa57c8cab417eddf1e12f74d43934d4
+    volumes:
+      - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./clickhouse/resources.xml:/etc/clickhouse-server/config.d/resources.xml:ro
+    environment:
+      CLICKHOUSE_SKIP_USER_SETUP: "1"
+    healthcheck:
+      test: [CMD, clickhouse-client, --query, "SELECT throwIf((SELECT count() FROM campusstream.sessions) != 1000000)"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+      start_period: 15s
+    mem_limit: 1000m
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8090:8090"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      model:
+        condition: service_started
+    environment:
+      MODEL_URL: http://model:8080
+      CLICKHOUSE_URL: http://clickhouse:8123
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    mem_limit: 256m
+volumes:
+  model-cache:

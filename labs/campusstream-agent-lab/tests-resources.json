@@ -1,0 +1,56 @@
+{
+  "campusstream-app-1": {
+    "limit_bytes": 268435456,
+    "oom_killed": false,
+    "status": "running",
+    "image": "campusstream-app",
+    "peak_bytes": 46002176
+  },
+  "campusstream-model-1": {
+    "limit_bytes": 2411724800,
+    "oom_killed": false,
+    "status": "running",
+    "image": "ghcr.io/ggml-org/llama.cpp:server@sha256:143926008cbbbab8fae8fd87809875af3e42d3d676c30c11c55c0f3f683a5a07",
+    "peak_bytes": 1236066304
+  },
+  "campusstream-clickhouse-1": {
+    "limit_bytes": 1048576000,
+    "oom_killed": false,
+    "status": "running",
+    "image": "clickhouse/clickhouse-server:25.10-alpine@sha256:50e6fdaef0b2387b7312e07197672f5ccaa57c8cab417eddf1e12f74d43934d4",
+    "peak_bytes": 622018560
+  },
+  "campusstream-model-download-1": {
+    "limit_bytes": 167772160,
+    "oom_killed": false,
+    "status": "exited",
+    "image": "campusstream-model-download"
+  },
+  "campusstream-amd64-app-1": {
+    "limit_bytes": 268435456,
+    "oom_killed": false,
+    "status": "running",
+    "image": "campusstream-amd64-app",
+    "peak_bytes": 89620480
+  },
+  "campusstream-amd64-model-1": {
+    "limit_bytes": 2411724800,
+    "oom_killed": false,
+    "status": "running",
+    "image": "ghcr.io/ggml-org/llama.cpp:server@sha256:143926008cbbbab8fae8fd87809875af3e42d3d676c30c11c55c0f3f683a5a07",
+    "peak_bytes": 898600960
+  },
+  "campusstream-amd64-clickhouse-1": {
+    "limit_bytes": 1048576000,
+    "oom_killed": false,
+    "status": "running",
+    "image": "clickhouse/clickhouse-server:25.10-alpine@sha256:50e6fdaef0b2387b7312e07197672f5ccaa57c8cab417eddf1e12f74d43934d4",
+    "peak_bytes": 626962432
+  },
+  "campusstream-amd64-model-download-1": {
+    "limit_bytes": 167772160,
+    "oom_killed": false,
+    "status": "exited",
+    "image": "campusstream-amd64-model-download"
+  }
+}

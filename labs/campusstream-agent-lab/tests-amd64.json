@@ -1,0 +1,82 @@
+{
+  "ready": {
+    "ready": true,
+    "model": "ready",
+    "clickhouse": "ready",
+    "model_name": "Qwen2.5-Coder 1.5B \u00b7 Q4_K_M \u00b7 CPU"
+  },
+  "tests": [
+    {
+      "prompt": "Compare starts by title and build a dashboard.",
+      "plan": {
+        "action": "query",
+        "metric": "starts",
+        "group_by": "title",
+        "threshold_seconds": 1200,
+        "dashboard_title": "Starts by Title"
+      },
+      "winner": "The Matrix",
+      "value": 500000,
+      "seconds": 17.75,
+      "note": {
+        "limitation": "unequal exposure and sessions are not users",
+        "next_test": "a controlled homepage experiment with return visits and quick exits as a guardrail",
+        "observation": "Highest observed starts: 500,000. Leader: The Matrix."
+      }
+    },
+    {
+      "prompt": "Rank titles by engaged sessions using a 20-minute threshold. Build a dashboard.",
+      "plan": {
+        "action": "query",
+        "metric": "engaged_sessions",
+        "group_by": "title",
+        "threshold_seconds": 1200,
+        "dashboard_title": "Top Titles by Engaged Sessions (20-minute Threshold)"
+      },
+      "winner": "Apollo 13",
+      "value": 240000,
+      "seconds": 8.35,
+      "note": {
+        "limitation": "unequal exposure and sessions are not users",
+        "next_test": "a controlled homepage experiment with return visits and quick exits as a guardrail",
+        "observation": "Highest observed engaged sessions: 240,000. Leader: Apollo 13."
+      }
+    },
+    {
+      "prompt": "Which title has the highest engagement rate? Use a 20-minute threshold and build a decision dashboard.",
+      "plan": {
+        "action": "query",
+        "metric": "engagement_pct",
+        "group_by": "title",
+        "threshold_seconds": 1200,
+        "dashboard_title": "Top Engagement Titles"
+      },
+      "winner": "Cloud Atlas",
+      "value": 90,
+      "seconds": 7.65,
+      "note": {
+        "limitation": " unequal exposure and sessions are not users",
+        "next_test": "a controlled homepage experiment with return visits and quick exits as a guardrail",
+        "observation": "Highest observed engagement rate: 90%. Leader: Cloud Atlas."
+      }
+    },
+    {
+      "prompt": "Compare engagement rate by device, using a 40-minute threshold. Build a dashboard.",
+      "plan": {
+        "action": "query",
+        "metric": "engagement_pct",
+        "group_by": "device",
+        "threshold_seconds": 2400,
+        "dashboard_title": "Engagement Rate by Device (40-minute Threshold)"
+      },
+      "winner": "mobile",
+      "value": 0,
+      "seconds": 7.58,
+      "note": {
+        "limitation": "unequal exposure and sessions are not users",
+        "next_test": "a controlled homepage experiment with return visits and quick exits as a guardrail",
+        "observation": "Highest observed engagement rate: 0%. Tie: mobile, web."
+      }
+    }
+  ]
+}
