@@ -24,6 +24,10 @@ if __name__ == "__main__":
         with urllib.request.urlopen(MODEL_URL, timeout=90) as source, temporary.open("wb") as output:
             while block := source.read(1024 * 1024):
                 output.write(block)
+                # Bound dirty page cache as well as Python buffers under the 160 MiB cap.
+                output.flush()
+                os.fsync(output.fileno())
+                os.posix_fadvise(output.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)
         if digest(temporary) != SHA256:
             temporary.unlink(missing_ok=True)
             raise RuntimeError("Model checksum mismatch. Run docker compose up again to retry.")

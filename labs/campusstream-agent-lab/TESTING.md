@@ -1,5 +1,9 @@
 # Verification record — 20 October 2026
 
+## Cold-start fix — v1.0.1
+
+A fresh Mac Studio download exposed exit 137 / OOMKilled at the 160 MiB downloader limit after approximately 328 MiB of weights had been written. The downloader now flushes each 1 MiB block to disk and releases its file-cache pages. A fresh download then completed with exit 0 / OOMKilled false under the same 167,772,160-byte cap, retained SHA-256 verification, and passed all four real-model investigations and seven postflight checks. Evidence: `tests-studio-cold.json`. The Studio Docker VM had approximately 16 GiB allocated; this does not establish operation in a 4 GiB VM. The original ARM64/AMD64 receipts below predate this patch.
+
 ## Actual coverage
 
 | Environment | Startup + actual model + database + HTML build | Evidence |
