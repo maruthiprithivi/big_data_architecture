@@ -1,0 +1,13 @@
+services:
+  model-download:
+    platform: linux/amd64
+  model:
+    platform: linux/amd64
+  clickhouse:
+    platform: linux/amd64
+  app:
+    platform: linux/amd64
+volumes:
+  model-cache:
+    external: true
+    name: campusstream_model-cache

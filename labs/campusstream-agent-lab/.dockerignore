@@ -1,0 +1,7 @@
+*
+!Dockerfile
+!app.py
+!download_model.py
+!verify.py
+!web/
+!web/**

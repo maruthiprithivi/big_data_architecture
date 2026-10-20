@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-20",
+  "host": "macOS Apple Silicon",
+  "launchers": {
+    "bash": {
+      "preflight": "PASS",
+      "setup": "PASS",
+      "postflight": "PASS"
+    },
+    "PowerShell 7.4.6 on macOS": {
+      "preflight": "PASS",
+      "setup": "PASS",
+      "postflight": "PASS"
+    }
+  },
+  "mock_failure_cases_per_launcher": 5,
+  "path_with_spaces": "PASS",
+  "exports": [
+    "results/postflight.json",
+    "results/dashboard.html"
+  ],
+  "native_Windows_WSL2": "NOT TESTED",
+  "Docker_VM_4GiB": "NOT TESTED; per-service caps total 3716 MiB",
+  "4GiB_allocation_reserve_case": "PASS: 3.75 GiB reported memory accepted; 2 GiB rejected"
+}
