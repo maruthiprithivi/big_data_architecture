@@ -6,9 +6,9 @@ A twenty-minute Big Data Architecture lab: predict a title, change the success m
 
 Student repository: **https://github.com/maruthiprithivi/big_data_architecture/tree/main/labs/campusstream-agent-lab**
 
-Download **[the lab-only ZIP](https://github.com/maruthiprithivi/big_data_architecture/releases/download/campusstream-lab-v1.1.0/campusstream-agent-lab.zip)**, then **extract** it. No Git installation is required. Open the extracted `campusstream-agent-lab` folder containing `compose.yaml` in Terminal (macOS) or PowerShell (Windows).
+The lab is an ordinary source folder in this repository. **Clone the course repo**, or use GitHub **Code → Download ZIP** and extract it if you do not have Git. Open `labs/campusstream-agent-lab`, the folder containing `compose.yaml`, in Terminal (macOS) or PowerShell (Windows). An optional [lab-only release ZIP](https://github.com/maruthiprithivi/big_data_architecture/releases/download/campusstream-lab-v1.1.0/campusstream-agent-lab.zip) is also available.
 
-If you already cloned the course repository, open `labs/campusstream-agent-lab` instead. The lab's own Compose file and scripts run independently of the blockchain lab at the repository root. Run the commands below from the lab folder.
+The lab's own Compose file and scripts run independently of the blockchain lab at the repository root. Run the commands below from the lab folder.
 
 Install and start Docker Desktop before the session. Windows uses **Linux containers with WSL 2**. Use the Intel/Apple Silicon Docker Desktop edition matching your Mac. Set Docker/WSL memory to at least **4 GiB**; the laptop OS needs additional RAM. Then run **one command per action**:
 
@@ -46,23 +46,19 @@ Tools support title/device/day, starts/engaged_sessions/engagement_pct, and 60/6
 
 The numeric observation is derived from query rows, including ties. A small model initially misread a ranking in testing; keeping arithmetic and ranking in the tool is a deliberate architecture choice. Inspect model-selected metrics and proposed interpretations rather than treating them as facts.
 
-## Follow the data
+## Architecture: from production story to local lab
 
-```mermaid
-flowchart LR
-  A[Deterministic session generator] --> B[Typed MergeTree table]
-  Q[Student question] --> M[Local model: typed plan]
-  M --> V[Validate metric, grouping, threshold]
-  V --> S[Read-only SQL tool]
-  S --> B
-  B --> E[Actual rows + verified observation]
-  E --> N[Local model: propose limitation / next test]
-  E --> D[Escaped HTML dashboard]
-  N --> D
-  D --> H[Student: inspect, challenge, decide]
-```
+The lecture follows the full event-to-decision path, then zooms into the analytical portion students run. **[Read the architecture guide](ARCHITECTURE.md)** for the numbered request flow, service boundaries and links to the implementation.
 
-The source is a batch generator, not a live stream. `event_time` and `ingested_at` illustrate event/arrival time; no queue, source collector or deduplication pipeline is implemented. `session_id`, typed fields, a sorting key and separate query/model/app services connect to the overall IS459 module. Discuss ingestion contracts, burst buffering, bad/duplicate events, freshness, column scans, query design and dashboard decisions in the lecture. The lab directly exercises the query-to-decision portion.
+**Conceptual production system** — collect events, prepare sessions, compare titles, then test a homepage decision:
+
+![Conceptual CampusStream production architecture](docs/production-architecture.svg)
+
+**Actual local lab** — the Python app mediates every model and database request; the AI cannot query ClickHouse directly:
+
+![CampusStream local Docker architecture and numbered evidence flow](docs/lab-architecture.svg)
+
+The lab starts with a batch generator of prepared synthetic sessions. It does not implement live collection, a queue, sessionization or deduplication. `event_time` and `ingested_at` illustrate event/arrival time. The separate model, app and database services directly exercise the query-to-decision portion of the overall Big Data Architecture module.
 
 ## Data contract and expected evidence
 
