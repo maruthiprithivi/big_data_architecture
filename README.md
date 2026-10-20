@@ -8,7 +8,7 @@ This system demonstrates real-time blockchain data engineering by collecting, st
 
 ## Guest lecture lab: CampusStream
 
-For the twenty-minute **ClickHouse + local AI** guest lecture, start at **[labs/campusstream-agent-lab](labs/campusstream-agent-lab/README.md)**. Use the **[small lab-only ZIP](https://github.com/maruthiprithivi/big_data_architecture/releases/download/campusstream-lab-v1.0.0/campusstream-agent-lab.zip)**, extract it, then run its macOS/Windows setup command. The lab includes preflight, readiness checks and postflight evidence exports; its app opens at http://localhost:8090.
+For the twenty-minute **ClickHouse + local AI** guest lecture, start at **[labs/campusstream-agent-lab](labs/campusstream-agent-lab/README.md)**. Use the **[small lab-only ZIP](https://github.com/maruthiprithivi/big_data_architecture/releases/download/campusstream-lab-v1.0.1/campusstream-agent-lab.zip)**, extract it, then run its macOS/Windows setup command. The lab includes preflight, readiness checks and postflight evidence exports; its app opens at http://localhost:8090.
 
 This separate lab uses one million synthetic viewing sessions, a CPU model and a 3.63 GiB container workload budget. The blockchain course system below keeps its own setup.
 

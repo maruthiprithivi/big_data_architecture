@@ -6,7 +6,7 @@ A twenty-minute Big Data Architecture lab: ask a small local model to plan an in
 
 Student repository: **https://github.com/maruthiprithivi/big_data_architecture/tree/main/labs/campusstream-agent-lab**
 
-Download **[the lab-only ZIP](https://github.com/maruthiprithivi/big_data_architecture/releases/download/campusstream-lab-v1.0.0/campusstream-agent-lab.zip)**, then **extract** it. No Git installation is required. Open the extracted `campusstream-agent-lab` folder containing `compose.yaml` in Terminal (macOS) or PowerShell (Windows).
+Download **[the lab-only ZIP](https://github.com/maruthiprithivi/big_data_architecture/releases/download/campusstream-lab-v1.0.1/campusstream-agent-lab.zip)**, then **extract** it. No Git installation is required. Open the extracted `campusstream-agent-lab` folder containing `compose.yaml` in Terminal (macOS) or PowerShell (Windows).
 
 If you already cloned the course repository, open `labs/campusstream-agent-lab` instead. The lab's own Compose file and scripts run independently of the blockchain lab at the repository root. Run the commands below from the lab folder.
 
